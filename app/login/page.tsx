@@ -31,7 +31,14 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (data.success) {
-        router.push('/dashboard');
+        // ✅ Use replace + a small timeout to ensure state is cleared
+        router.replace('/dashboard');
+        // Force a small delay then refresh if still stuck
+        setTimeout(() => {
+          if (window.location.pathname !== '/dashboard') {
+            window.location.href = '/dashboard';
+          }
+        }, 100);
       } else {
         setError(data.error || 'Login failed');
       }
