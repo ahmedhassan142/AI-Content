@@ -485,6 +485,14 @@ export default function SeoContent() {
   const [fixResult, setFixResult] = useState<FixResult | null>(null);
   const [fixError, setFixError] = useState<string | null>(null);
 
+  // Apply-to-site state
+  const [wpSites, setWpSites] = useState<Array<{ _id: string; siteName: string; siteUrl: string }>>([]);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [applyTarget, setApplyTarget] = useState<'wordpress' | 'webhook'>('wordpress');
+  const [selectedWpSite, setSelectedWpSite] = useState('');
+  const [applying, setApplying] = useState(false);
+  const [applyResult, setApplyResult] = useState<{ success: boolean; message: string; postUrl?: string } | null>(null);
+
   const [history, setHistory] = useState<Audit[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
@@ -610,6 +618,102 @@ export default function SeoContent() {
       setFixError(message);
     } finally {
       setFixing(false);
+    }
+  };
+
+  // ---- Apply fixes to connected site ----
+  const openApplyModal = async () => {
+    if (!fixResult) return;
+    setShowApplyModal(true);
+    setApplyResult(null);
+    setSelectedWpSite('');
+    setApplyTarget('wordpress');
+    try {
+      const res = await fetch('/api/wordpress', { headers: { ...getAuthHeader() } });
+      const data = await res.json();
+      if (data.success && data.sites?.length > 0) {
+        setWpSites(data.sites);
+        setSelectedWpSite(data.sites[0]._id);
+      } else {
+        setWpSites([]);
+        setApplyTarget('webhook');
+      }
+    } catch {
+      setWpSites([]);
+      setApplyTarget('webhook');
+    }
+  };
+
+  const handleApplyFix = async () => {
+    if (!fixResult || !audit) return;
+    setApplying(true);
+    setApplyResult(null);
+
+    try {
+      // Build a summary of all fixes as content
+      const fixSummary = fixResult.fixes
+        .filter((f) => f.status === 'fixed')
+        .map((f) => {
+          const snippets = f.codeSnippets.map((s) => s.code).join('\n');
+          return `## ${f.checkName}\n\n${f.fixDescription}\n\n\`\`\`\n${snippets}\n\`\`\``;
+        })
+        .join('\n\n');
+
+      const title = `SEO Fixes for ${audit.url}`;
+      const content = `# SEO Fix Report for ${audit.url}\n\n**Overall Score:** ${audit.overallScore}/100\n\n**Fixes Applied:**\n\n${fixSummary}`;
+
+      if (applyTarget === 'wordpress') {
+        if (!selectedWpSite) {
+          setApplyResult({ success: false, message: 'Select a WordPress site first.' });
+          setApplying(false);
+          return;
+        }
+        const res = await fetch(`/api/wordpress/${selectedWpSite}/publish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify({
+            title,
+            content,
+            status: 'draft',
+            excerpt: `SEO fixes for ${audit.url} — Score: ${audit.overallScore}/100`,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setApplyResult({
+            success: true,
+            message: `SEO fixes published to WordPress as draft. Post ID: ${data.postId}`,
+            postUrl: data.postUrl,
+          });
+        } else {
+          setApplyResult({ success: false, message: data.error || 'Failed to publish to WordPress.' });
+        }
+      } else {
+        // Send via webhook — save content triggers content.saved webhook
+        const res = await fetch('/api/content/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify({
+            title,
+            content,
+            type: 'generated',
+            seoKeywords: [audit.url, 'SEO fixes'],
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setApplyResult({
+            success: true,
+            message: 'SEO fixes sent to all connected webhook sites.',
+          });
+        } else {
+          setApplyResult({ success: false, message: data.error || 'Failed to send via webhook.' });
+        }
+      }
+    } catch (err: any) {
+      setApplyResult({ success: false, message: err.message || 'Network error.' });
+    } finally {
+      setApplying(false);
     }
   };
 
@@ -1010,10 +1114,190 @@ export default function SeoContent() {
                         <FixCard key={`${f.checkId}-${i}`} fix={f} />
                       ))}
                     </div>
+
+                    {/* Apply to Connected Site button */}
+                    <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200">
+                      <div className="flex items-center justify-between flex-wrap gap-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                            <Wrench className="w-4 h-4 text-purple-600" />
+                            Apply Fixes to Your Website
+                          </h3>
+                          <p className="text-sm text-gray-700 mt-0.5">
+                            Send these SEO fixes directly to your connected WordPress or custom website.
+                          </p>
+                        </div>
+                        <button
+                          onClick={openApplyModal}
+                          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition flex items-center gap-2 whitespace-nowrap"
+                        >
+                          <Wrench className="w-4 h-4" />
+                          Apply to Site
+                        </button>
+                      </div>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Apply to Site Modal */}
+        <AnimatePresence>
+          {showApplyModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]"
+              >
+                <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <Wrench className="w-5 h-5 text-purple-600" />
+                    Apply SEO Fixes
+                  </h3>
+                  <button
+                    onClick={() => setShowApplyModal(false)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition"
+                  >
+                    <XCircle className="w-5 h-5 text-gray-700" />
+                  </button>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200">
+                  <button
+                    onClick={() => { setApplyTarget('wordpress'); setApplyResult(null); }}
+                    className={`flex-1 px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 transition ${
+                      applyTarget === 'wordpress'
+                        ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50'
+                        : 'text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    <Globe className="w-4 h-4" />
+                    WordPress
+                  </button>
+                  <button
+                    onClick={() => { setApplyTarget('webhook'); setApplyResult(null); }}
+                    className={`flex-1 px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 transition ${
+                      applyTarget === 'webhook'
+                        ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50'
+                        : 'text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Webhook
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-4 overflow-auto flex-1">
+                  {applyTarget === 'wordpress' ? (
+                    wpSites.length === 0 ? (
+                      <div className="text-center py-6">
+                        <Globe className="w-10 h-10 mx-auto mb-2 text-gray-400" />
+                        <p className="text-gray-900 font-medium mb-1">No WordPress sites connected</p>
+                        <p className="text-sm text-gray-700 mb-4">Connect a WordPress site to apply fixes directly.</p>
+                        <a
+                          href="/wordpress"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition"
+                        >
+                          <Globe className="w-4 h-4" />
+                          Go to WordPress Settings
+                        </a>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Select WordPress Site</label>
+                        <select
+                          value={selectedWpSite}
+                          onChange={(e) => setSelectedWpSite(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                        >
+                          {wpSites.map((s) => (
+                            <option key={s._id} value={s._id}>
+                              {s.siteName} — {s.siteUrl}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-gray-600 mt-2">
+                          The SEO fix report will be published as a draft post on your WordPress site.
+                        </p>
+                      </div>
+                    )
+                  ) : (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-800">
+                        The SEO fix report will be sent to all connected webhook sites.
+                        The target website's webhook receiver will store it in their database.
+                      </p>
+                      <a href="/webhooks" className="inline-flex items-center gap-1 text-sm text-purple-600 hover:underline mt-2">
+                        <Sparkles className="w-4 h-4" />
+                        Manage webhook integrations →
+                      </a>
+                    </div>
+                  )}
+
+                  {applyResult && (
+                    <div
+                      className={`p-3 rounded-lg text-sm flex items-start gap-2 ${
+                        applyResult.success
+                          ? 'bg-green-50 border border-green-200 text-green-800'
+                          : 'bg-red-50 border border-red-200 text-red-800'
+                      }`}
+                    >
+                      {applyResult.success ? (
+                        <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium">{applyResult.message}</p>
+                        {applyResult.success && applyResult.postUrl && (
+                          <a
+                            href={applyResult.postUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-purple-600 hover:underline mt-1 text-xs"
+                          >
+                            View post <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-6 border-t border-gray-200 flex gap-3">
+                  <button
+                    onClick={() => setShowApplyModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-800 hover:bg-gray-50 transition"
+                  >
+                    Close
+                  </button>
+                  {!(applyTarget === 'wordpress' && wpSites.length === 0) && (
+                    <button
+                      onClick={handleApplyFix}
+                      disabled={applying || (applyTarget === 'wordpress' && !selectedWpSite)}
+                      className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {applying ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Applying...
+                        </>
+                      ) : (
+                        <>
+                          <Wrench className="w-4 h-4" />
+                          {applyTarget === 'wordpress' ? 'Apply to WordPress' : 'Send to Webhooks'}
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            </div>
           )}
         </AnimatePresence>
 
