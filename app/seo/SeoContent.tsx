@@ -522,6 +522,7 @@ function SeoAuditPanel() {
   const [progressIdx, setProgressIdx] = useState(0);
   const [audit, setAudit] = useState<Audit | null>(null);
   const [auditError, setAuditError] = useState<string | null>(null);
+  const [autoToolResults, setAutoToolResults] = useState<Record<string, any>>({});
 
   const [fixing, setFixing] = useState(false);
   const [fixResult, setFixResult] = useState<FixResult | null>(null);
@@ -629,7 +630,7 @@ function SeoAuditPanel() {
           runTool('/api/seo/orphan-pages', { url: auditedUrl }),
         ]);
 
-        // Store results — all 6 tools
+        // Store results directly in state — no window events needed
         const autoResults: Record<string, any> = {};
         if (schemaData?.success) autoResults['schema-check'] = schemaData;
         if (redirectData?.success) autoResults['redirect-check'] = redirectData;
@@ -637,10 +638,7 @@ function SeoAuditPanel() {
         if (canonicalData?.success) autoResults['canonical-check'] = canonicalData;
         if (thinData?.success) autoResults['thin-content'] = thinData;
         if (orphanData?.success) autoResults['orphan-pages'] = orphanData;
-
-        // Store in a global ref so SeoToolsResults component can access them
-        (window as any).__seoAutoResults = autoResults;
-        window.dispatchEvent(new CustomEvent('seo-auto-results-ready'));
+        setAutoToolResults(autoResults);
       } else {
         setAuditError(data.error || 'Audit failed.');
       }
@@ -1061,8 +1059,8 @@ function SeoAuditPanel() {
                   </div>
                 </div>
 
-                {/* Advanced checks — merged inline, no separate section */}
-                <SeoToolsResults url={audit.url} getAuthHeader={getAuthHeader} merged />
+                {/* Advanced checks — merged inline, results passed directly */}
+                <SeoToolsResults url={audit.url} getAuthHeader={getAuthHeader} merged autoResults={autoToolResults} />
               </div>
 
               {/* Fix button */}
@@ -1474,25 +1472,18 @@ function SeoAuditPanel() {
 // SeoToolsResults — auto-runs all 8 tools after audit
 // ============================================================
 
-function SeoToolsResults({ url, getAuthHeader, merged }: { url: string; getAuthHeader: () => Record<string, string>; merged?: boolean }) {
+function SeoToolsResults({ url, getAuthHeader, merged, autoResults: initialResults }: { url: string; getAuthHeader: () => Record<string, string>; merged?: boolean; autoResults?: Record<string, any> }) {
   const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [toolResults, setToolResults] = useState<Record<string, any>>({});
+  const [toolResults, setToolResults] = useState<Record<string, any>>(initialResults || {});
   const [toolLoading, setToolLoading] = useState<string | null>(null);
   const [toolErrors, setToolErrors] = useState<Record<string, string>>({});
-  const [autoRunDone, setAutoRunDone] = useState(false);
 
-  // Listen for auto-results from the audit
+  // Update results when autoResults prop changes (from parent state)
   useEffect(() => {
-    const handler = () => {
-      const autoResults = (window as any).__seoAutoResults;
-      if (autoResults && Object.keys(autoResults).length > 0) {
-        setToolResults(autoResults);
-        setAutoRunDone(true);
-      }
-    };
-    window.addEventListener('seo-auto-results-ready', handler);
-    return () => window.removeEventListener('seo-auto-results-ready', handler);
-  }, []);
+    if (initialResults && Object.keys(initialResults).length > 0) {
+      setToolResults(initialResults);
+    }
+  }, [initialResults]);
 
   const tools = [
     { id: 'schema-check', name: 'Schema Markup', icon: Code2, endpoint: '/api/seo/schema-check', inputField: 'url' },
@@ -1539,12 +1530,6 @@ function SeoToolsResults({ url, getAuthHeader, merged }: { url: string; getAuthH
           <Wrench className="w-5 h-5 text-purple-600" />
           <h2 className="font-bold text-gray-900">Advanced SEO Analysis</h2>
           <span className="text-xs text-gray-600 ml-1">for {url}</span>
-          {autoRunDone && (
-            <span className="ml-auto text-xs text-green-600 font-medium flex items-center gap-1">
-              <Check className="w-3 h-3" />
-              Auto-completed
-            </span>
-          )}
         </div>
         )}
 
