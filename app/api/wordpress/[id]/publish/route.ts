@@ -167,6 +167,10 @@ function markdownToHtml(markdown: string): string {
  * POST /api/wordpress/:id/publish
  * Publishes a post to WordPress using the REST API.
  * Body: { title, content, status?, excerpt? }
+ *
+ * If the WordPress site doesn't have a "Blog" page or posts page set up,
+ * the post is still created as a post (WordPress shows posts on the posts page
+ * or the homepage by default). The returned postUrl points to the individual post.
  */
 export async function POST(
   request: NextRequest,
@@ -213,6 +217,62 @@ export async function POST(
 
     const htmlContent = markdownToHtml(content);
 
+    // --- Step 1: Try to find or create a "Blog" category ---
+    let categoryId: number | undefined = site.defaultCategoryId || undefined;
+
+    if (!categoryId) {
+      try {
+        // Check if a "Blog" or "Articles" category exists
+        const catRes = await fetch(
+          `${site.siteUrl}/wp-json/wp/v2/categories?search=blog`,
+          {
+            headers: {
+              Authorization: buildBasicAuthHeader(site.wpUsername, site.wpApplicationPassword),
+              Accept: 'application/json',
+            },
+            signal: AbortSignal.timeout(10000),
+          }
+        );
+
+        if (catRes.ok) {
+          const cats = await catRes.json();
+          if (Array.isArray(cats) && cats.length > 0) {
+            categoryId = cats[0].id;
+          }
+        }
+
+        // If no category found, try to create one
+        if (!categoryId) {
+          const createCatRes = await fetch(
+            `${site.siteUrl}/wp-json/wp/v2/categories`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: buildBasicAuthHeader(site.wpUsername, site.wpApplicationPassword),
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+              },
+              body: JSON.stringify({ name: 'Blog', slug: 'blog' }),
+              signal: AbortSignal.timeout(10000),
+            }
+          );
+
+          if (createCatRes.ok) {
+            const newCat = await createCatRes.json();
+            if (newCat && newCat.id) {
+              categoryId = newCat.id;
+              // Save it as default for future publishes
+              site.defaultCategoryId = newCat.id;
+            }
+          }
+        }
+      } catch (catErr) {
+        // Non-fatal — publish without category
+        console.error('[wordpress] Category setup failed (non-fatal):', catErr);
+      }
+    }
+
+    // --- Step 2: Create the post ---
     const endpoint = `${site.siteUrl}/wp-json/wp/v2/posts`;
 
     const postBody: Record<string, unknown> = {
@@ -224,8 +284,8 @@ export async function POST(
     if (typeof excerpt === 'string' && excerpt.trim()) {
       postBody.excerpt = excerpt.trim();
     }
-    if (typeof site.defaultCategoryId === 'number' && site.defaultCategoryId > 0) {
-      postBody.categories = [site.defaultCategoryId];
+    if (categoryId && typeof categoryId === 'number' && categoryId > 0) {
+      postBody.categories = [categoryId];
     }
 
     const controller = new AbortController();
@@ -258,15 +318,35 @@ export async function POST(
         );
       }
 
-      // Update lastPublishedAt timestamp.
+      // --- Step 3: Verify the post was actually created ---
+      if (!data.id) {
+        return NextResponse.json(
+          { success: false, error: 'WordPress did not return a post ID. The post may not have been created.' },
+          { status: 500 }
+        );
+      }
+
+      // Update lastPublishedAt timestamp
       site.lastPublishedAt = new Date();
       site.isConnected = true;
       await site.save().catch(() => {});
 
+      // --- Step 4: Construct the post URL ---
+      // WordPress returns the post link in data.link
+      // If the site doesn't have a blog page, the link points to the post's permalink
+      let postUrl = data.link || '';
+
+      // If no link returned, construct one from the site URL + post ID
+      if (!postUrl) {
+        postUrl = `${site.siteUrl}/?p=${data.id}`;
+      }
+
       return NextResponse.json({
         success: true,
         postId: data.id,
-        postUrl: data.link || null,
+        postUrl: postUrl,
+        message: `Post ${finalStatus === 'publish' ? 'published' : 'saved as draft'} successfully on WordPress.`,
+        categoryId: categoryId || null,
       });
     } finally {
       clearTimeout(timeout);

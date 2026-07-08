@@ -9,7 +9,7 @@ import {
   Search, ShieldCheck, SpellCheck, History, Star,
   Copy, Check, Loader2, Wand2, TrendingUp, AlertCircle,
   Shield, Bot, Repeat, Hash, Eye, XCircle, CheckCircle2, ArrowRight,
-  Globe, X, ExternalLink
+  Globe, X, ExternalLink, Webhook
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { GuestStorage } from '@/lib/GuestStorage';
@@ -100,6 +100,8 @@ export default function DashboardContent() {
   const [wpPublishStatus, setWpPublishStatus] = useState<'draft' | 'publish'>('draft');
   const [wpPublishing, setWpPublishing] = useState(false);
   const [wpResult, setWpResult] = useState<{ success: boolean; message: string; postUrl?: string | null } | null>(null);
+  const [webhookPublishing, setWebhookPublishing] = useState(false);
+  const [webhookResult, setWebhookResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     checkSession();
@@ -469,6 +471,49 @@ export default function DashboardContent() {
     }
   };
 
+  const handleWebhookPublish = async () => {
+    if (!content) return;
+    setWebhookPublishing(true);
+    setWebhookResult(null);
+    try {
+      // The webhook 'content.saved' event fires automatically when content is saved.
+      // But we can also manually trigger by saving the content.
+      const res = await fetch('/api/content/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({
+          title: title || 'Untitled',
+          content,
+          type: 'generated',
+          tone,
+          length,
+          language,
+          seoKeywords,
+          plagiarismScore,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWebhookResult({
+          success: true,
+          message: 'Content saved and sent to all connected webhook sites.',
+        });
+      } else {
+        setWebhookResult({
+          success: false,
+          message: data.error || 'Failed to publish via webhook.',
+        });
+      }
+    } catch (err: any) {
+      setWebhookResult({
+        success: false,
+        message: err.message || 'Network error.',
+      });
+    } finally {
+      setWebhookPublishing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -791,6 +836,18 @@ export default function DashboardContent() {
                     <Globe className="w-5 h-5 text-gray-700" />
                   </button>
                   <button
+                    onClick={handleWebhookPublish}
+                    disabled={!content || webhookPublishing}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition relative"
+                    title="Send to Webhook Sites"
+                  >
+                    {webhookPublishing ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                    ) : (
+                      <Webhook className="w-5 h-5 text-gray-700" />
+                    )}
+                  </button>
+                  <button
                     onClick={saveContent}
                     disabled={!content || saving}
                     className="p-2 hover:bg-gray-100 rounded-lg transition"
@@ -831,6 +888,39 @@ export default function DashboardContent() {
                 )}
               </div>
             </motion.div>
+
+            {/* Webhook publish result */}
+            {webhookResult && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`p-3 rounded-xl text-sm flex items-start gap-2 ${
+                  webhookResult.success
+                    ? 'bg-green-50 border border-green-200 text-green-800'
+                    : 'bg-red-50 border border-red-200 text-red-800'
+                }`}
+              >
+                {webhookResult.success ? (
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                )}
+                <div className="flex-1">
+                  <p className="font-medium">{webhookResult.message}</p>
+                  {!isGuest && (
+                    <Link href="/webhooks" className="text-xs text-purple-600 hover:underline mt-1 inline-block">
+                      Manage webhook integrations →
+                    </Link>
+                  )}
+                </div>
+                <button
+                  onClick={() => setWebhookResult(null)}
+                  className="text-gray-400 hover:text-gray-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            )}
 
             {grammarIssues.length > 0 && (
               <motion.div
