@@ -236,7 +236,7 @@ export default function HistoryPage() {
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg mb-1 text-gray-800">{content.title || 'Untitled'}</h3>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <div className="flex items-center gap-4 text-sm text-gray-700">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
                           {new Date(content.createdAt).toLocaleDateString()}
@@ -251,7 +251,7 @@ export default function HistoryPage() {
                         className={`p-2 rounded-lg transition ${
                           content.isFavorite 
                             ? 'text-yellow-500 hover:text-yellow-600' 
-                            : 'text-gray-400 hover:text-yellow-500'
+                            : 'text-gray-600 hover:text-yellow-500'
                         } ${updatingFavorite === (content._id || (content as any).id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         title={content.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                       >
@@ -263,7 +263,7 @@ export default function HistoryPage() {
                       </button>
                       <button
                         onClick={() => deleteContent(content._id || (content as any).id)}
-                        className="p-2 rounded-lg text-gray-400 hover:text-red-500 transition"
+                        className="p-2 rounded-lg text-gray-600 hover:text-red-500 transition"
                         title="Delete"
                       >
                         <Trash2 className="w-5 h-5" />

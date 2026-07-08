@@ -73,24 +73,8 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Set auth cookies
-    response.cookies.set('access-token', tokenPair.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60,
-      path: '/',
-    });
-
-    response.cookies.set('refresh-token', tokenPair.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60,
-      path: '/',
-    });
-
-    return response;
+    // Set auth cookies (uses centralized helper for proper SameSite/secure handling)
+    return setAuthCookies(response, tokenPair, request);
   } catch (error) {
     console.error('Email verification error:', error);
     return NextResponse.json(

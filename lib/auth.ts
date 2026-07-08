@@ -131,44 +131,52 @@ export function getTokensFromRequest(request: NextRequest): { accessToken: strin
   };
 }
 // Set auth cookies in response
-export function setAuthCookies(response: NextResponse, tokenPair: TokenPair): NextResponse {
+export function setAuthCookies(response: NextResponse, tokenPair: TokenPair, request?: NextRequest): NextResponse {
+  const forwardedProto = request?.headers.get('x-forwarded-proto') || '';
+  const isHttps = process.env.NODE_ENV === 'production' || forwardedProto.includes('https');
+  const sameSite = isHttps ? 'none' : 'lax';
+
   response.cookies.set('access-token', tokenPair.accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60, // 7 days
+    secure: isHttps,
+    sameSite,
+    maxAge: 7 * 24 * 60 * 60,
     path: '/',
   });
-  
+
   response.cookies.set('refresh-token', tokenPair.refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    secure: isHttps,
+    sameSite,
+    maxAge: 30 * 24 * 60 * 60,
     path: '/',
   });
-  
+
   return response;
 }
 
 // Clear auth cookies
-export function clearAuthCookies(response: NextResponse): NextResponse {
+export function clearAuthCookies(response: NextResponse, request?: NextRequest): NextResponse {
+  const forwardedProto = request?.headers.get('x-forwarded-proto') || '';
+  const isHttps = process.env.NODE_ENV === 'production' || forwardedProto.includes('https');
+  const sameSite = isHttps ? 'none' : 'lax';
+
   response.cookies.set('access-token', '', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isHttps,
+    sameSite,
     maxAge: 0,
     path: '/',
   });
-  
+
   response.cookies.set('refresh-token', '', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isHttps,
+    sameSite,
     maxAge: 0,
     path: '/',
   });
-  
+
   return response;
 }
 

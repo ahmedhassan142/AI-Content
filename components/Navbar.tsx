@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles, Menu, X, LayoutDashboard, History, Star, LogOut, 
-  User, ChevronDown, FileText, Crown, Eye, Heart
+  Sparkles, Menu, X, LayoutDashboard, History, Star, LogOut,
+  User, ChevronDown, FileText, Crown, Eye, Heart, Search, Webhook
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -66,14 +66,15 @@ export default function Navbar() {
 
   const dashboardNavItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/seo', label: 'SEO Tools', icon: Search },
+    { path: '/webhooks', label: 'Webhooks', icon: Webhook },
     { path: '/history', label: 'History', icon: History },
     { path: '/favorites', label: 'Favorites', icon: Heart },
   ];
 
   const publicNavItems = [
+    { path: '/seo', label: 'SEO Tools' },
     { path: '/#features', label: 'Features', hash: true },
-    { path: '/#pricing', label: 'Pricing', hash: true },
-    { path: '/#testimonials', label: 'Testimonials', hash: true },
   ];
 
   const handleLogout = async () => {
@@ -86,7 +87,7 @@ export default function Navbar() {
     setIsStartingGuest(true);
     await createGuestSession();
     setIsStartingGuest(false);
-    router.push('/dashboard');
+    window.location.href = '/dashboard';
   };
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string, isHash?: boolean) => {
@@ -214,7 +215,7 @@ export default function Navbar() {
                                 <p className="font-semibold text-gray-900">
                                   {isGuest ? 'Guest User' : user?.name}
                                 </p>
-                                <p className="text-xs text-gray-500 truncate">
+                                <p className="text-xs text-gray-700 truncate">
                                   {isGuest ? 'Temporary session' : user?.email}
                                 </p>
                                 {isGuest && (
@@ -241,7 +242,7 @@ export default function Navbar() {
                                 className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
                                 onClick={() => setIsProfileOpen(false)}
                               >
-                                <User className="w-4 h-4 text-gray-400" />
+                                <User className="w-4 h-4 text-gray-700" />
                                 <span>My Profile</span>
                               </Link>
                             )}
@@ -250,7 +251,7 @@ export default function Navbar() {
                               className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
                               onClick={() => setIsProfileOpen(false)}
                             >
-                              <LayoutDashboard className="w-4 h-4 text-gray-400" />
+                              <LayoutDashboard className="w-4 h-4 text-gray-700" />
                               <span>Dashboard</span>
                             </Link>
                             <Link
@@ -258,7 +259,7 @@ export default function Navbar() {
                               className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
                               onClick={() => setIsProfileOpen(false)}
                             >
-                              <History className="w-4 h-4 text-gray-400" />
+                              <History className="w-4 h-4 text-gray-700" />
                               <span>My Content</span>
                             </Link>
                             <Link
@@ -266,7 +267,7 @@ export default function Navbar() {
                               className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
                               onClick={() => setIsProfileOpen(false)}
                             >
-                              <Heart className="w-4 h-4 text-gray-400" />
+                              <Heart className="w-4 h-4 text-gray-700" />
                               <span>Favorites</span>
                             </Link>
                             
@@ -279,7 +280,7 @@ export default function Navbar() {
                                 onClick={() => setIsProfileOpen(false)}
                               >
                                 <Crown className="w-4 h-4" />
-                                <span>Upgrade to Pro</span>
+                                <span>Sign Up to Save Content</span>
                               </Link>
                             ) : null}
                             
@@ -432,7 +433,25 @@ export default function Navbar() {
                       <LayoutDashboard className="w-5 h-5" />
                       <span>Dashboard</span>
                     </Link>
-                    
+
+                    <Link
+                      href="/seo"
+                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Search className="w-5 h-5" />
+                      <span>SEO Tools</span>
+                    </Link>
+
+                    <Link
+                      href="/webhooks"
+                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Webhook className="w-5 h-5" />
+                      <span>Webhooks</span>
+                    </Link>
+
                     <Link
                       href="/history"
                       className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition"
@@ -458,7 +477,7 @@ export default function Navbar() {
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
                         <Crown className="w-5 h-5" />
-                        <span>Upgrade to Pro</span>
+                        <span>Sign Up to Save Content</span>
                       </Link>
                     )}
                     

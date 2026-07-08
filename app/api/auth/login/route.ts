@@ -91,11 +91,11 @@ export async function POST(request: NextRequest) {
         role: user.role,
         isEmailVerified: user.isEmailVerified || false,
         phone: user.phone
-      }
+      },
+      accessToken: tokenPair.accessToken,
     });
 
-    // Set both access and refresh tokens as cookies
-    return setAuthCookies(response, tokenPair);
+    return setAuthCookies(response, tokenPair, request);
     
   } catch (error: any) {
     console.error('Login error details:', error);
