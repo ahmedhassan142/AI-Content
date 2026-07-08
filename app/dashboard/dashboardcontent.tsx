@@ -205,7 +205,11 @@ export default function DashboardContent() {
         setSeoKeywords(data.seoKeywords || []);
         setPlagiarismScore(data.plagiarismScore ?? null);
         setGrammarIssues(data.grammarIssues || []);
-        setTitle(prompt.slice(0, 50));
+        // Extract title from the generated content's first H1, not from the raw prompt
+        const contentTitle = data.content
+          ? (data.content.match(/^#\s+(.+)$/m)?.[1] || data.content.split('\n')[0].replace(/[#*]/g, '').trim() || prompt.slice(0, 50))
+          : prompt.slice(0, 50);
+        setTitle(contentTitle);
         if (data.plagiarismReport) {
           setPlagiarismReport(data.plagiarismReport);
         }

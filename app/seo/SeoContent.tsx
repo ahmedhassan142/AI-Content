@@ -608,7 +608,7 @@ function SeoAuditPanel() {
         setAudit(data.audit);
         loadHistory();
 
-        // Auto-run all 4 URL-based tools in parallel right after audit
+        // Auto-run ALL URL-based tools in parallel right after audit
         const auditedUrl = data.audit.url;
         const toolHeaders = { 'Content-Type': 'application/json', ...getAuthHeader() };
         const runTool = async (endpoint: string, body: any) => {
@@ -618,23 +618,29 @@ function SeoAuditPanel() {
           } catch { return null; }
         };
 
-        const [schemaData, redirectData, linksData, vitalsData] = await Promise.all([
+        // ALL 7 URL-based tools run simultaneously
+        const [schemaData, redirectData, linksData, vitalsData, canonicalData, thinData, orphanData] = await Promise.all([
           runTool('/api/seo/schema-check', { url: auditedUrl }),
           runTool('/api/seo/redirect-check', { url: auditedUrl }),
           runTool('/api/seo/internal-links', { url: auditedUrl }),
           fastMode ? Promise.resolve(null) : runTool('/api/seo/core-web-vitals', { url: auditedUrl }),
+          runTool('/api/seo/canonical-check', { url: auditedUrl }),
+          runTool('/api/seo/thin-content', { url: auditedUrl }),
+          runTool('/api/seo/orphan-pages', { url: auditedUrl }),
         ]);
 
-        // Store results — these will be picked up by SeoToolsResults component
+        // Store results
         const autoResults: Record<string, any> = {};
         if (schemaData?.success) autoResults['schema-check'] = schemaData;
         if (redirectData?.success) autoResults['redirect-check'] = redirectData;
         if (linksData?.success) autoResults['internal-links'] = linksData;
         if (vitalsData?.success) autoResults['core-web-vitals'] = vitalsData;
+        if (canonicalData?.success) autoResults['canonical-check'] = canonicalData;
+        if (thinData?.success) autoResults['thin-content'] = thinData;
+        if (orphanData?.success) autoResults['orphan-pages'] = orphanData;
 
-        // Store in a global ref so SeoToolsResults can access them
+        // Store in a global ref so SeoToolsResults component can access them
         (window as any).__seoAutoResults = autoResults;
-        // Trigger a re-render by dispatching a custom event
         window.dispatchEvent(new CustomEvent('seo-auto-results-ready'));
       } else {
         setAuditError(data.error || 'Audit failed.');
@@ -1497,6 +1503,9 @@ function SeoToolsResults({ url, getAuthHeader, merged }: { url: string; getAuthH
     { id: 'redirect-check', name: 'Redirect Check', icon: GitBranch, endpoint: '/api/seo/redirect-check', inputField: 'url' },
     { id: 'internal-links', name: 'Internal Links', icon: Link2, endpoint: '/api/seo/internal-links', inputField: 'url' },
     { id: 'core-web-vitals', name: 'Core Web Vitals', icon: Gauge, endpoint: '/api/seo/core-web-vitals', inputField: 'url' },
+    { id: 'canonical-check', name: 'Canonical Tag', icon: ShieldCheck, endpoint: '/api/seo/canonical-check', inputField: 'url' },
+    { id: 'thin-content', name: 'Thin Content', icon: FileText, endpoint: '/api/seo/thin-content', inputField: 'url' },
+    { id: 'orphan-pages', name: 'Orphan Pages', icon: AlertTriangle, endpoint: '/api/seo/orphan-pages', inputField: 'url' },
   ];
 
   const runTool = async (toolId: string, endpoint: string) => {
@@ -1762,6 +1771,53 @@ function ToolResultDisplay({ toolId, data }: { toolId: string; data: any }) {
             <span className="text-xs text-gray-700">SEO: <span className="font-bold text-purple-600">{data.scores.seo}</span></span>
           </>}
         </div>
+      </div>
+    );
+  }
+  if (toolId === 'canonical-check') {
+    return (
+      <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+        <h3 className="font-semibold text-gray-900 text-sm">Canonical Tag Check</h3>
+        <p className="text-sm text-gray-700">Canonical: <span className="font-mono text-xs">{data.canonical || 'None found'}</span></p>
+        <p className="text-sm text-gray-700">og:url: <span className="font-mono text-xs">{data.ogUrl || 'None found'}</span></p>
+        <p className="text-sm text-gray-700">Has hreflang: {data.hasHreflang ? '✅ Yes' : '❌ No'}</p>
+        {data.issues?.length > 0 ? (
+          <div className="space-y-1">{data.issues.map((issue: string, i: number) => <p key={i} className="text-xs text-red-600">⚠ {issue}</p>)}</div>
+        ) : <p className="text-xs text-green-600">✅ Canonical tag is properly configured.</p>}
+      </div>
+    );
+  }
+  if (toolId === 'thin-content') {
+    return (
+      <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+        <h3 className="font-semibold text-gray-900 text-sm">Content Quality Check</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="bg-white border border-gray-200 rounded-lg p-2"><p className="text-xs text-gray-600">Words</p><p className={`text-sm font-bold ${data.wordCount < 300 ? 'text-red-600' : data.wordCount < 600 ? 'text-yellow-600' : 'text-green-600'}`}>{data.wordCount}</p></div>
+          <div className="bg-white border border-gray-200 rounded-lg p-2"><p className="text-xs text-gray-600">Sentences</p><p className="text-sm font-bold text-gray-900">{data.sentenceCount}</p></div>
+          <div className="bg-white border border-gray-200 rounded-lg p-2"><p className="text-xs text-gray-600">Paragraphs</p><p className="text-sm font-bold text-gray-900">{data.paragraphCount}</p></div>
+          <div className="bg-white border border-gray-200 rounded-lg p-2"><p className="text-xs text-gray-600">Avg w/s</p><p className="text-sm font-bold text-gray-900">{data.avgWordsPerSentence}</p></div>
+        </div>
+        <p className="text-sm"><span className="font-semibold text-gray-900">Level:</span> <span className={data.level === 'critical' ? 'text-red-600' : data.level === 'thin' ? 'text-yellow-600' : 'text-green-600'}>{data.level}</span></p>
+        {data.issues?.length > 0 && <div className="space-y-1">{data.issues.map((issue: string, i: number) => <p key={i} className="text-xs text-red-600">⚠ {issue}</p>)}</div>}
+      </div>
+    );
+  }
+  if (toolId === 'orphan-pages') {
+    return (
+      <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+        <h3 className="font-semibold text-gray-900 text-sm">Orphan Page Detection</h3>
+        <p className="text-sm text-gray-700">Total internal pages found: {data.totalInternalPages}</p>
+        <p className="text-sm"><span className="font-semibold text-gray-900">Orphan candidates:</span> <span className={data.orphanCount > 0 ? 'text-yellow-600' : 'text-green-600'}>{data.orphanCount}</span></p>
+        {data.orphanCandidates?.length > 0 ? (
+          <div className="space-y-1 max-h-40 overflow-auto">
+            {data.orphanCandidates.slice(0, 10).map((p: any, i: number) => (
+              <div key={i} className="bg-white border border-gray-200 rounded-lg p-2 text-xs">
+                <span className="font-mono text-gray-700">{p.path}</span>
+                <span className="text-gray-500 ml-2">({p.linkCount} link{p.linkCount === 1 ? '' : 's'})</span>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-xs text-green-600">✅ No orphan pages detected — all pages are well-linked.</p>}
       </div>
     );
   }
