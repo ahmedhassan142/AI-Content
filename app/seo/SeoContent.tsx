@@ -482,7 +482,7 @@ function ProgressOverlay({ message }: { message: string }) {
 // ============================================================
 
 export default function SeoContent() {
-  const [activeTab, setActiveTab] = useState<'audit' | 'tools'>('audit');
+  // Tab state removed — all tools are now integrated into the audit view
 
   return (
     <div className="bg-gray-50 min-h-screen pt-4 pb-16">
@@ -500,59 +500,9 @@ export default function SeoContent() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm w-fit">
-          <button
-            onClick={() => setActiveTab('audit')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition ${
-              activeTab === 'audit'
-                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow'
-                : 'text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <Gauge className="w-4 h-4" />
-            SEO Audit
-          </button>
-          <button
-            onClick={() => setActiveTab('tools')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition ${
-              activeTab === 'tools'
-                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow'
-                : 'text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <Wrench className="w-4 h-4" />
-            SEO Tools
-            <span className="text-[10px] font-semibold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">
-              8
-            </span>
-          </button>
-        </div>
+        {/* Tab content — single unified view, no tabs */}
+        <SeoAuditPanel />
 
-        {/* Tab content */}
-        <AnimatePresence mode="wait">
-          {activeTab === 'audit' ? (
-            <motion.div
-              key="audit"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-            >
-              <SeoAuditPanel />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="tools"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-            >
-              <SeoToolsPanel />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );
@@ -1398,6 +1348,11 @@ function SeoAuditPanel() {
           )}
         </AnimatePresence>
 
+        {/* Additional SEO Tools — auto-run after audit */}
+        {audit && (
+          <SeoToolsResults url={audit.url} getAuthHeader={getAuthHeader} />
+        )}
+
         {/* History */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
@@ -1484,7 +1439,389 @@ function SeoAuditPanel() {
 }
 
 // ============================================================
-// SEO Tools Panel (8 free tools)
+// SeoToolsResults — auto-runs all 8 tools after audit
+// ============================================================
+
+function SeoToolsResults({ url, getAuthHeader }: { url: string; getAuthHeader: () => Record<string, string> }) {
+  const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [toolResults, setToolResults] = useState<Record<string, any>>({});
+  const [toolLoading, setToolLoading] = useState<string | null>(null);
+  const [toolErrors, setToolErrors] = useState<Record<string, string>>({});
+
+  const tools = [
+    { id: 'schema-check', name: 'Schema Markup', icon: Code2, endpoint: '/api/seo/schema-check', inputField: 'url' },
+    { id: 'redirect-check', name: 'Redirect Check', icon: GitBranch, endpoint: '/api/seo/redirect-check', inputField: 'url' },
+    { id: 'internal-links', name: 'Internal Links', icon: Link2, endpoint: '/api/seo/internal-links', inputField: 'url' },
+    { id: 'core-web-vitals', name: 'Core Web Vitals', icon: Gauge, endpoint: '/api/seo/core-web-vitals', inputField: 'url' },
+  ];
+
+  const runTool = async (toolId: string, endpoint: string) => {
+    setToolLoading(toolId);
+    setActiveTool(toolId);
+    setToolErrors((prev) => ({ ...prev, [toolId]: '' }));
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setToolResults((prev) => ({ ...prev, [toolId]: data }));
+      } else {
+        setToolErrors((prev) => ({ ...prev, [toolId]: data.error || 'Failed' }));
+      }
+    } catch (err: any) {
+      setToolErrors((prev) => ({ ...prev, [toolId]: err.message || 'Network error' }));
+    } finally {
+      setToolLoading(null);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-6"
+    >
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Wrench className="w-5 h-5 text-purple-600" />
+          <h2 className="font-bold text-gray-900">Advanced SEO Analysis</h2>
+          <span className="text-xs text-gray-600 ml-1">for {url}</span>
+        </div>
+
+        {/* Tool buttons */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          {tools.map((tool) => {
+            const Icon = tool.icon;
+            const isActive = activeTool === tool.id;
+            const isLoading = toolLoading === tool.id;
+            const hasResult = !!toolResults[tool.id];
+            const hasError = !!toolErrors[tool.id];
+            return (
+              <button
+                key={tool.id}
+                onClick={() => {
+                  if (!hasResult && !isLoading) runTool(tool.id, tool.endpoint);
+                  else setActiveTool(isActive ? null : tool.id);
+                }}
+                className={`p-3 rounded-xl border text-left transition ${
+                  isActive
+                    ? 'border-purple-400 bg-purple-50'
+                    : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon className={`w-4 h-4 ${hasResult ? 'text-green-600' : 'text-purple-600'}`} />
+                  <span className="text-xs font-semibold text-gray-900">{tool.name}</span>
+                  {isLoading && <Loader2 className="w-3 h-3 animate-spin text-purple-600 ml-auto" />}
+                  {hasResult && !isLoading && <Check className="w-3 h-3 text-green-600 ml-auto" />}
+                  {hasError && !isLoading && <XCircle className="w-3 h-3 text-red-500 ml-auto" />}
+                </div>
+                <p className="text-[11px] text-gray-600">
+                  {hasResult ? 'Click to view results' : 'Click to run analysis'}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tool results */}
+        <AnimatePresence>
+          {activeTool && toolResults[activeTool] && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <ToolResultDisplay toolId={activeTool} data={toolResults[activeTool]} />
+            </motion.div>
+          )}
+          {activeTool && toolErrors[activeTool] && (
+            <ErrorBanner message={toolErrors[activeTool]} />
+          )}
+        </AnimatePresence>
+
+        {/* Schema Generator + Search Intent + Keyword Difficulty (standalone tools) */}
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <p className="text-xs font-semibold text-gray-700 mb-3">Standalone Tools</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <StandaloneTool
+              title="Schema Generator"
+              icon={Code2}
+              placeholder="Type: Organization, Article, Product, LocalBusiness"
+              buttonText="Generate"
+              onSubmit={async (input) => {
+                const res = await fetch('/api/seo/schema-generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                  body: JSON.stringify({ type: input, data: { name: url, url } }),
+                });
+                return res.json();
+              }}
+              renderResult={(data) => (
+                <div>
+                  <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded-lg overflow-auto max-h-60">{data.schema}</pre>
+                  <CopyButton text={data.html || data.schema || ''} label="Copy HTML" />
+                </div>
+              )}
+            />
+            <StandaloneTool
+              title="Search Intent"
+              icon={Brain}
+              placeholder="Enter a keyword..."
+              buttonText="Analyze"
+              onSubmit={async (input) => {
+                const res = await fetch('/api/seo/search-intent', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                  body: JSON.stringify({ keyword: input }),
+                });
+                return res.json();
+              }}
+              renderResult={(data) => (
+                <div className="space-y-1">
+                  <p className="text-sm"><span className="font-semibold text-gray-900">Intent:</span> <span className="capitalize text-purple-600">{data.intent}</span></p>
+                  <p className="text-sm"><span className="font-semibold text-gray-900">Confidence:</span> {data.confidence}%</p>
+                  {data.signals && <p className="text-xs text-gray-700">Signals: {data.signals.join(', ')}</p>}
+                </div>
+              )}
+            />
+            <StandaloneTool
+              title="Keyword Difficulty"
+              icon={BarChart3}
+              placeholder="Enter a keyword..."
+              buttonText="Estimate"
+              onSubmit={async (input) => {
+                const res = await fetch('/api/seo/keyword-difficulty', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                  body: JSON.stringify({ keyword: input }),
+                });
+                return res.json();
+              }}
+              renderResult={(data) => (
+                <div className="space-y-1">
+                  <p className="text-sm"><span className="font-semibold text-gray-900">Difficulty:</span> <span className={data.difficulty > 60 ? 'text-red-600' : data.difficulty > 30 ? 'text-yellow-600' : 'text-green-600'}>{data.difficulty}/100 ({data.level})</span></p>
+                  {data.factors && <p className="text-xs text-gray-700">{data.factors.map((f: any) => f.label).join(', ')}</p>}
+                </div>
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Duplicate Content Checker */}
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <DuplicateContentChecker getAuthHeader={getAuthHeader} url1={url} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function ToolResultDisplay({ toolId, data }: { toolId: string; data: any }) {
+  if (toolId === 'schema-check') {
+    return (
+      <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+        <h3 className="font-semibold text-gray-900 text-sm">Schema Markup Results</h3>
+        {!data.hasSchema ? (
+          <p className="text-sm text-red-600">No structured data (JSON-LD) found on this page. Add schema markup to improve search visibility.</p>
+        ) : (
+          <>
+            <p className="text-sm text-green-700">{data.count} schema(s) found.</p>
+            {data.schemas?.map((s: any, i: number) => (
+              <div key={i} className="bg-white border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold text-gray-900">{s.type || 'Unknown'}</span>
+                  {s.valid ? <Check className="w-3 h-3 text-green-600" /> : <XCircle className="w-3 h-3 text-red-500" />}
+                </div>
+                {s.errors?.length > 0 && <p className="text-xs text-red-600">{s.errors.join(', ')}</p>}
+                {s.warnings?.length > 0 && <p className="text-xs text-yellow-600">{s.warnings.join(', ')}</p>}
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    );
+  }
+  if (toolId === 'redirect-check') {
+    return (
+      <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+        <h3 className="font-semibold text-gray-900 text-sm">Redirect Chain</h3>
+        <p className="text-sm text-gray-700">Total redirects: {data.totalRedirects} | Final URL: {data.finalUrl}</p>
+        {data.hasLoop && <p className="text-sm text-red-600">⚠ Redirect loop detected!</p>}
+        {data.isChain && <p className="text-sm text-yellow-600">⚠ Redirect chain found — consider redirecting directly to the final URL.</p>}
+        {data.chain?.map((hop: any, i: number) => (
+          <div key={i} className="bg-white border border-gray-200 rounded-lg p-2 text-xs">
+            <span className="font-mono text-gray-700">{hop.status}</span> → {hop.url}
+            {hop.type && <span className="ml-2 text-purple-600">{hop.type}</span>}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (toolId === 'internal-links') {
+    return (
+      <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+        <h3 className="font-semibold text-gray-900 text-sm">Internal Links ({data.totalLinks || 0} found)</h3>
+        <p className="text-sm text-gray-700">External links: {data.externalLinksCount || 0}</p>
+        {data.internalLinks?.slice(0, 10).map((link: any, i: number) => (
+          <div key={i} className="bg-white border border-gray-200 rounded-lg p-2 text-xs">
+            <span className="font-mono text-gray-700 truncate block">{link.url}</span>
+            <span className="text-gray-600">Anchor: "{link.anchorText}" {link.nofollow && ' (nofollow)'}</span>
+          </div>
+        ))}
+        {data.suggestions?.length > 0 && (
+          <div className="mt-2">
+            <p className="text-xs font-semibold text-gray-700">Suggestions:</p>
+            {data.suggestions.map((s: string, i: number) => <p key={i} className="text-xs text-gray-600">• {s}</p>)}
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (toolId === 'core-web-vitals') {
+    const m = data.metrics || {};
+    const scoreColor = (val: string, target: string) => val === 'Good' ? 'text-green-600' : val === 'Poor' ? 'text-red-600' : 'text-yellow-600';
+    return (
+      <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+        <h3 className="font-semibold text-gray-900 text-sm">Core Web Vitals</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {m.lcp && <div className="bg-white border border-gray-200 rounded-lg p-2"><p className="text-xs text-gray-600">LCP</p><p className={`text-sm font-bold ${scoreColor(m.lcp.rating, '2.5s')}`}>{m.lcp.value}</p></div>}
+          {m.cls && <div className="bg-white border border-gray-200 rounded-lg p-2"><p className="text-xs text-gray-600">CLS</p><p className={`text-sm font-bold ${scoreColor(m.cls.rating, '0.1')}`}>{m.cls.value}</p></div>}
+          {m.fcp && <div className="bg-white border border-gray-200 rounded-lg p-2"><p className="text-xs text-gray-600">FCP</p><p className={`text-sm font-bold ${scoreColor(m.fcp.rating, '1.8s')}`}>{m.fcp.value}</p></div>}
+          {m.tbt && <div className="bg-white border border-gray-200 rounded-lg p-2"><p className="text-xs text-gray-600">TBT</p><p className={`text-sm font-bold ${scoreColor(m.tbt.rating, '200ms')}`}>{m.tbt.value}</p></div>}
+        </div>
+        <div className="flex gap-3 mt-2">
+          {data.scores && <>
+            <span className="text-xs text-gray-700">Performance: <span className="font-bold text-purple-600">{data.scores.performance}</span></span>
+            <span className="text-xs text-gray-700">SEO: <span className="font-bold text-purple-600">{data.scores.seo}</span></span>
+          </>}
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
+function StandaloneTool({ title, icon: Icon, placeholder, buttonText, onSubmit, renderResult }: {
+  title: string;
+  icon: any;
+  placeholder: string;
+  buttonText: string;
+  onSubmit: (input: string) => Promise<any>;
+  renderResult: (data: any) => React.ReactNode;
+}) {
+  const [input, setInput] = useState('');
+  const [result, setResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleRun = async () => {
+    if (!input.trim()) return;
+    setLoading(true);
+    setError('');
+    setResult(null);
+    try {
+      const data = await onSubmit(input.trim());
+      if (data.success) setResult(data);
+      else setError(data.error || 'Failed');
+    } catch (err: any) {
+      setError(err.message || 'Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className="w-4 h-4 text-purple-600" />
+        <span className="text-xs font-semibold text-gray-900">{title}</span>
+      </div>
+      <input
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 mb-2"
+        disabled={loading}
+      />
+      <button
+        onClick={handleRun}
+        disabled={loading || !input.trim()}
+        className="w-full py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition disabled:opacity-50"
+      >
+        {loading ? 'Running...' : buttonText}
+      </button>
+      {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
+      {result && <div className="mt-2">{renderResult(result)}</div>}
+    </div>
+  );
+}
+
+function DuplicateContentChecker({ getAuthHeader, url1 }: { getAuthHeader: () => Record<string, string>; url1: string }) {
+  const [url2, setUrl2] = useState('');
+  const [result, setResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleCheck = async () => {
+    if (!url2.trim()) return;
+    setLoading(true);
+    setError('');
+    setResult(null);
+    try {
+      const res = await fetch('/api/seo/duplicate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ url1, url2: url2.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) setResult(data);
+      else setError(data.error || 'Failed');
+    } catch (err: any) {
+      setError(err.message || 'Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-700 mb-2">Duplicate Content Checker</p>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={url2}
+          onChange={(e) => setUrl2(e.target.value)}
+          placeholder="Compare with another URL..."
+          className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900"
+          disabled={loading}
+        />
+        <button
+          onClick={handleCheck}
+          disabled={loading || !url2.trim()}
+          className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition disabled:opacity-50"
+        >
+          {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Compare'}
+        </button>
+      </div>
+      {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
+      {result && (
+        <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+          <p className="text-sm"><span className="font-semibold text-gray-900">Similarity:</span> <span className={result.similarity > 70 ? 'text-red-600' : result.similarity > 40 ? 'text-yellow-600' : 'text-green-600'}>{result.similarity}%</span> ({result.level})</p>
+          {result.recommendation && <p className="text-xs text-gray-700 mt-1">{result.recommendation}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// SEO Tools Panel (8 free tools) — kept for reference
 // ============================================================
 
 type ToolId =
