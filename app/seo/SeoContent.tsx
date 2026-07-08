@@ -607,6 +607,35 @@ function SeoAuditPanel() {
       if (data.success && data.audit) {
         setAudit(data.audit);
         loadHistory();
+
+        // Auto-run all 4 URL-based tools in parallel right after audit
+        const auditedUrl = data.audit.url;
+        const toolHeaders = { 'Content-Type': 'application/json', ...getAuthHeader() };
+        const runTool = async (endpoint: string, body: any) => {
+          try {
+            const r = await fetch(endpoint, { method: 'POST', headers: toolHeaders, body: JSON.stringify(body) });
+            return await r.json();
+          } catch { return null; }
+        };
+
+        const [schemaData, redirectData, linksData, vitalsData] = await Promise.all([
+          runTool('/api/seo/schema-check', { url: auditedUrl }),
+          runTool('/api/seo/redirect-check', { url: auditedUrl }),
+          runTool('/api/seo/internal-links', { url: auditedUrl }),
+          fastMode ? Promise.resolve(null) : runTool('/api/seo/core-web-vitals', { url: auditedUrl }),
+        ]);
+
+        // Store results — these will be picked up by SeoToolsResults component
+        const autoResults: Record<string, any> = {};
+        if (schemaData?.success) autoResults['schema-check'] = schemaData;
+        if (redirectData?.success) autoResults['redirect-check'] = redirectData;
+        if (linksData?.success) autoResults['internal-links'] = linksData;
+        if (vitalsData?.success) autoResults['core-web-vitals'] = vitalsData;
+
+        // Store in a global ref so SeoToolsResults can access them
+        (window as any).__seoAutoResults = autoResults;
+        // Trigger a re-render by dispatching a custom event
+        window.dispatchEvent(new CustomEvent('seo-auto-results-ready'));
       } else {
         setAuditError(data.error || 'Audit failed.');
       }
@@ -1447,6 +1476,23 @@ function SeoToolsResults({ url, getAuthHeader }: { url: string; getAuthHeader: (
   const [toolResults, setToolResults] = useState<Record<string, any>>({});
   const [toolLoading, setToolLoading] = useState<string | null>(null);
   const [toolErrors, setToolErrors] = useState<Record<string, string>>({});
+  const [autoRunDone, setAutoRunDone] = useState(false);
+
+  // Listen for auto-results from the audit
+  useEffect(() => {
+    const handler = () => {
+      const autoResults = (window as any).__seoAutoResults;
+      if (autoResults && Object.keys(autoResults).length > 0) {
+        setToolResults(autoResults);
+        // Auto-expand the first result
+        const firstKey = Object.keys(autoResults)[0];
+        setActiveTool(firstKey);
+        setAutoRunDone(true);
+      }
+    };
+    window.addEventListener('seo-auto-results-ready', handler);
+    return () => window.removeEventListener('seo-auto-results-ready', handler);
+  }, []);
 
   const tools = [
     { id: 'schema-check', name: 'Schema Markup', icon: Code2, endpoint: '/api/seo/schema-check', inputField: 'url' },
@@ -1489,6 +1535,12 @@ function SeoToolsResults({ url, getAuthHeader }: { url: string; getAuthHeader: (
           <Wrench className="w-5 h-5 text-purple-600" />
           <h2 className="font-bold text-gray-900">Advanced SEO Analysis</h2>
           <span className="text-xs text-gray-600 ml-1">for {url}</span>
+          {autoRunDone && (
+            <span className="ml-auto text-xs text-green-600 font-medium flex items-center gap-1">
+              <Check className="w-3 h-3" />
+              Auto-completed
+            </span>
+          )}
         </div>
 
         {/* Tool buttons */}
