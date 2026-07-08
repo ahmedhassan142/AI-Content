@@ -650,46 +650,65 @@ export default function SeoContent() {
     setApplyResult(null);
 
     try {
-      // Build a summary of all fixes as content
-      const fixSummary = fixResult.fixes
-        .filter((f) => f.status === 'fixed')
-        .map((f) => {
-          const snippets = f.codeSnippets.map((s) => s.code).join('\n');
-          return `## ${f.checkName}\n\n${f.fixDescription}\n\n\`\`\`\n${snippets}\n\`\`\``;
-        })
-        .join('\n\n');
-
-      const title = `SEO Fixes for ${audit.url}`;
-      const content = `# SEO Fix Report for ${audit.url}\n\n**Overall Score:** ${audit.overallScore}/100\n\n**Fixes Applied:**\n\n${fixSummary}`;
-
       if (applyTarget === 'wordpress') {
         if (!selectedWpSite) {
           setApplyResult({ success: false, message: 'Select a WordPress site first.' });
           setApplying(false);
           return;
         }
-        const res = await fetch(`/api/wordpress/${selectedWpSite}/publish`, {
+
+        // Find the fixed title and meta description from the fix results
+        const titleFix = fixResult.fixes.find((f) => f.checkId === 'title');
+        const metaFix = fixResult.fixes.find((f) => f.checkId === 'meta_description');
+
+        // Extract the actual title text from the code snippet
+        let fixedTitle = '';
+        if (titleFix?.codeSnippets?.[0]?.code) {
+          const match = titleFix.codeSnippets[0].code.match(/<title>(.*?)<\/title>/i);
+          fixedTitle = match ? match[1] : '';
+        }
+
+        // Extract the meta description from the code snippet
+        let fixedMeta = '';
+        if (metaFix?.codeSnippets?.[0]?.code) {
+          const match = metaFix.codeSnippets[0].code.match(/content="([^"]*)"/i);
+          fixedMeta = match ? match[1] : '';
+        }
+
+        // Call the apply endpoint to actually update the WordPress page
+        const res = await fetch('/api/seo/apply', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
           body: JSON.stringify({
-            title,
-            content,
-            status: 'draft',
-            excerpt: `SEO fixes for ${audit.url} — Score: ${audit.overallScore}/100`,
+            wpSiteId: selectedWpSite,
+            auditedUrl: audit.url,
+            fixedTitle,
+            fixedMetaDescription: fixedMeta,
           }),
         });
         const data = await res.json();
         if (data.success) {
           setApplyResult({
             success: true,
-            message: `SEO fixes published to WordPress as draft. Post ID: ${data.postId}`,
+            message: `${data.message} Re-run the audit to see the improved score.`,
             postUrl: data.postUrl,
           });
         } else {
-          setApplyResult({ success: false, message: data.error || 'Failed to publish to WordPress.' });
+          setApplyResult({ success: false, message: data.error || 'Failed to apply fixes to WordPress.' });
         }
       } else {
         // Send via webhook — save content triggers content.saved webhook
+        const fixSummary = fixResult.fixes
+          .filter((f) => f.status === 'fixed')
+          .map((f) => {
+            const snippets = f.codeSnippets.map((s) => s.code).join('\n');
+            return `## ${f.checkName}\n\n${f.fixDescription}\n\n\`\`\`\n${snippets}\n\`\`\``;
+          })
+          .join('\n\n');
+
+        const title = `SEO Fixes for ${audit.url}`;
+        const content = `# SEO Fix Report for ${audit.url}\n\n**Overall Score:** ${audit.overallScore}/100\n\n**Fixes:**\n\n${fixSummary}`;
+
         const res = await fetch('/api/content/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
@@ -704,7 +723,7 @@ export default function SeoContent() {
         if (data.success) {
           setApplyResult({
             success: true,
-            message: 'SEO fixes sent to all connected webhook sites.',
+            message: 'SEO fixes sent to all connected webhook sites. The receiver should apply the fixes to the website.',
           });
         } else {
           setApplyResult({ success: false, message: data.error || 'Failed to send via webhook.' });
