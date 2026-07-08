@@ -1055,6 +1055,9 @@ function SeoAuditPanel() {
                     ))}
                   </div>
                 </div>
+
+                {/* Advanced checks — merged inline, no separate section */}
+                <SeoToolsResults url={audit.url} getAuthHeader={getAuthHeader} merged />
               </div>
 
               {/* Fix button */}
@@ -1377,11 +1380,6 @@ function SeoAuditPanel() {
           )}
         </AnimatePresence>
 
-        {/* Additional SEO Tools — auto-run after audit */}
-        {audit && (
-          <SeoToolsResults url={audit.url} getAuthHeader={getAuthHeader} />
-        )}
-
         {/* History */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
@@ -1471,7 +1469,7 @@ function SeoAuditPanel() {
 // SeoToolsResults — auto-runs all 8 tools after audit
 // ============================================================
 
-function SeoToolsResults({ url, getAuthHeader }: { url: string; getAuthHeader: () => Record<string, string> }) {
+function SeoToolsResults({ url, getAuthHeader, merged }: { url: string; getAuthHeader: () => Record<string, string>; merged?: boolean }) {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [toolResults, setToolResults] = useState<Record<string, any>>({});
   const [toolLoading, setToolLoading] = useState<string | null>(null);
@@ -1528,9 +1526,11 @@ function SeoToolsResults({ url, getAuthHeader }: { url: string; getAuthHeader: (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-6"
+      className="mt-2"
     >
-      <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+      <div className={merged ? "" : "bg-white border border-gray-200 rounded-2xl p-5 shadow-sm"}>
+        {/* Header — only show when NOT merged */}
+        {!merged && (
         <div className="flex items-center gap-2 mb-4">
           <Wrench className="w-5 h-5 text-purple-600" />
           <h2 className="font-bold text-gray-900">Advanced SEO Analysis</h2>
@@ -1542,6 +1542,16 @@ function SeoToolsResults({ url, getAuthHeader }: { url: string; getAuthHeader: (
             </span>
           )}
         </div>
+        )}
+
+        {/* When merged, show a small divider label */}
+        {merged && (
+          <div className="flex items-center gap-2 mb-3 mt-4">
+            <div className="h-px flex-1 bg-gray-200" />
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2">Advanced Checks</span>
+            <div className="h-px flex-1 bg-gray-200" />
+          </div>
+        )}
 
         {/* Tool buttons */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
