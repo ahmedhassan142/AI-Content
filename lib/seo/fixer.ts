@@ -46,6 +46,7 @@ export interface FixerOptions {
   url: string;
   html?: string;
   checks: SeoCheck[];
+  advancedResults?: Record<string, any>;
 }
 
 // ============================================================
@@ -867,7 +868,154 @@ export function generateSeoFixes(opts: FixerOptions): FixResult {
     }
   }
 
-  // Deduplicate indexability fixes that might have been pushed twice
+  // ===== Advanced tool fixes =====
+  const adv = opts.advancedResults || {};
+
+  // Schema Markup fix
+  if (adv['schema-check']) {
+    const sc = adv['schema-check'];
+    if (!sc.hasSchema || (sc.schemas && sc.schemas.some((s: any) => !s.valid || (s.errors && s.errors.length > 0)))) {
+      const origin = safeOrigin(url);
+      fixes.push({
+        checkId: 'schema_markup',
+        checkName: 'Schema Markup',
+        status: 'fixed',
+        fixDescription: sc.hasSchema ? 'Fix existing schema markup errors and add missing @context.' : 'No structured data found — generate schema markup.',
+        codeSnippets: sc.hasSchema ? [] : [{
+          label: 'Add this Organization schema to your <head>:',
+          language: 'html',
+          code: `<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "${$('title').first().text().trim() || 'Your Organization'}",
+  "url": "${origin}"
+}
+</script>`,
+          location: 'Inside the <head> section',
+        }],
+        instructions: sc.hasSchema
+          ? sc.schemas.filter((s: any) => s.errors?.length > 0).map((s: any) => `Fix ${s.type}: ${s.errors.join(', ')}`)
+          : ['Add JSON-LD structured data to your <head>', 'Include @context: "https://schema.org"', 'Validate at https://search.google.com/test/rich-results'],
+      });
+    } else {
+      fixes.push({ checkId: 'schema_markup', checkName: 'Schema Markup', status: 'already_ok', fixDescription: 'Schema markup is valid.', codeSnippets: [], instructions: [] });
+    }
+  }
+
+  // Internal Links fix
+  if (adv['internal-links']) {
+    const il = adv['internal-links'];
+    const noAnchorCount = il.internalLinks?.filter((l: any) => !l.anchorText || l.anchorText === '(no anchor text)').length || 0;
+    if (noAnchorCount > 0 || (il.suggestions && il.suggestions.length > 0)) {
+      fixes.push({
+        checkId: 'internal_links',
+        checkName: 'Internal Links',
+        status: 'cannot_fix',
+        fixDescription: `${noAnchorCount} internal links have no anchor text. ${il.suggestions?.length || 0} suggestions found.`,
+        codeSnippets: [],
+        instructions: [
+          `Add descriptive anchor text to ${noAnchorCount} link(s) with no text.`,
+          'Use keyword-rich anchor text (e.g., "buy winter jackets" not "click here").',
+          'Remove nofollow from important internal links to pass link equity.',
+          ...(il.suggestions || []),
+        ],
+      });
+    } else {
+      fixes.push({ checkId: 'internal_links', checkName: 'Internal Links', status: 'already_ok', fixDescription: 'Internal links look good.', codeSnippets: [], instructions: [] });
+    }
+  }
+
+  // Thin Content fix
+  if (adv['thin-content']) {
+    const tc = adv['thin-content'];
+    if (tc.level === 'critical' || tc.level === 'thin') {
+      fixes.push({
+        checkId: 'thin_content',
+        checkName: 'Thin Content',
+        status: 'cannot_fix',
+        fixDescription: `Content is too thin (${tc.wordCount} words, level: ${tc.level}). Needs expansion.`,
+        codeSnippets: [],
+        instructions: [
+          `Expand content from ${tc.wordCount} to at least 600 words.`,
+          'Add specific examples, data points, and case studies.',
+          'Break content into more paragraphs (currently ' + tc.paragraphCount + ').',
+          'Add H2/H3 subheadings for structure (currently ' + tc.h2Count + ' H2s).',
+          'Use the AI Content Writer to generate expanded content.',
+        ],
+      });
+    } else {
+      fixes.push({ checkId: 'thin_content', checkName: 'Thin Content', status: 'already_ok', fixDescription: `Content is sufficient (${tc.wordCount} words).`, codeSnippets: [], instructions: [] });
+    }
+  }
+
+  // Orphan Pages fix
+  if (adv['orphan-pages']) {
+    const op = adv['orphan-pages'];
+    if (op.orphanCount > 0) {
+      fixes.push({
+        checkId: 'orphan_pages',
+        checkName: 'Orphan Pages',
+        status: 'cannot_fix',
+        fixDescription: `${op.orphanCount} orphan page(s) found — pages with 0-1 internal links pointing to them.`,
+        codeSnippets: [],
+        instructions: [
+          `Add internal links from other pages to these orphan pages:`,
+          ...(op.orphanCandidates?.slice(0, 5).map((p: any) => `Link to ${p.path} from relevant pages`) || []),
+          'Add the orphan pages to your main navigation menu.',
+          'Add contextual links from blog posts or related pages.',
+        ],
+      });
+    } else {
+      fixes.push({ checkId: 'orphan_pages', checkName: 'Orphan Pages', status: 'already_ok', fixDescription: 'No orphan pages detected.', codeSnippets: [], instructions: [] });
+    }
+  }
+
+  // Redirect fix (if issues found)
+  if (adv['redirect-check']) {
+    const rc = adv['redirect-check'];
+    if (rc.hasLoop || rc.isChain || rc.totalRedirects > 2) {
+      fixes.push({
+        checkId: 'redirect_chain',
+        checkName: 'Redirect Chain',
+        status: 'cannot_fix',
+        fixDescription: `Redirect chain detected (${rc.totalRedirects} redirects). ${rc.hasLoop ? 'Loop detected!' : ''}`,
+        codeSnippets: [],
+        instructions: [
+          `Update the redirect to point directly to the final URL: ${rc.finalUrl}`,
+          'Avoid redirect chains longer than 1 hop.',
+          'Use 301 (permanent) redirects instead of 302 (temporary).',
+          'Check your .htaccess or server config for redirect rules.',
+        ],
+      });
+    } else {
+      fixes.push({ checkId: 'redirect_chain', checkName: 'Redirect Chain', status: 'already_ok', fixDescription: 'No redirect issues.', codeSnippets: [], instructions: [] });
+    }
+  }
+
+  // Canonical fix (if issues found)
+  if (adv['canonical-check']) {
+    const cc = adv['canonical-check'];
+    if (cc.issues && cc.issues.length > 0) {
+      fixes.push({
+        checkId: 'canonical_advanced',
+        checkName: 'Canonical Tag (Advanced)',
+        status: 'fixed',
+        fixDescription: cc.issues.join('; '),
+        codeSnippets: [{
+          label: 'Add or fix the canonical tag:',
+          language: 'html',
+          code: `<link rel="canonical" href="${url}">`,
+          location: 'Inside the <head> section',
+        }],
+        instructions: cc.issues,
+      });
+    } else {
+      fixes.push({ checkId: 'canonical_advanced', checkName: 'Canonical Tag (Advanced)', status: 'already_ok', fixDescription: 'Canonical tag is properly configured.', codeSnippets: [], instructions: [] });
+    }
+  }
+
+  // Deduplicate all fixes
   const deduped: SeoFix[] = [];
   const seenFix = new Set<string>();
   for (const f of fixes) {

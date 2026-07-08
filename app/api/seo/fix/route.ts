@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
       url: normalizedUrl,
       html,
       checks,
+      advancedResults: body.advancedResults || undefined,
     });
 
     // Fire webhook for authenticated users

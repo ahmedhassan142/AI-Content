@@ -664,6 +664,7 @@ function SeoAuditPanel() {
       };
       const reqBody: Record<string, unknown> = {
         url: audit.normalizedUrl || audit.url,
+        advancedResults: autoToolResults,
       };
       if (audit._id) reqBody.auditId = audit._id;
       if (isGuest && guestSession) {
