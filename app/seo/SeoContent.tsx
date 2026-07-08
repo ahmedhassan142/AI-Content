@@ -619,24 +619,21 @@ function SeoAuditPanel() {
           } catch { return null; }
         };
 
-        // ALL 7 URL-based tools run simultaneously
-        const [schemaData, redirectData, linksData, vitalsData, canonicalData, thinData, orphanData] = await Promise.all([
+        // ALL 6 URL-based tools run simultaneously (core-web-vitals removed — too many 429 errors)
+        const [schemaData, redirectData, linksData, canonicalData, thinData, orphanData] = await Promise.all([
           runTool('/api/seo/schema-check', { url: auditedUrl }),
           runTool('/api/seo/redirect-check', { url: auditedUrl }),
           runTool('/api/seo/internal-links', { url: auditedUrl }),
-          fastMode ? Promise.resolve(null) : runTool('/api/seo/core-web-vitals', { url: auditedUrl }).catch(() => null),
           runTool('/api/seo/canonical-check', { url: auditedUrl }),
           runTool('/api/seo/thin-content', { url: auditedUrl }),
           runTool('/api/seo/orphan-pages', { url: auditedUrl }),
         ]);
 
-        // Store results — skip failed tools gracefully
+        // Store results — all 6 tools
         const autoResults: Record<string, any> = {};
         if (schemaData?.success) autoResults['schema-check'] = schemaData;
         if (redirectData?.success) autoResults['redirect-check'] = redirectData;
         if (linksData?.success) autoResults['internal-links'] = linksData;
-        if (vitalsData?.success) autoResults['core-web-vitals'] = vitalsData;
-        else if (!fastMode) autoResults['core-web-vitals'] = { success: false, error: 'Google PageSpeed Insights is rate-limited (429). Try again later or use fast mode.' };
         if (canonicalData?.success) autoResults['canonical-check'] = canonicalData;
         if (thinData?.success) autoResults['thin-content'] = thinData;
         if (orphanData?.success) autoResults['orphan-pages'] = orphanData;
@@ -1504,7 +1501,6 @@ function SeoToolsResults({ url, getAuthHeader, merged }: { url: string; getAuthH
     { id: 'schema-check', name: 'Schema Markup', icon: Code2, endpoint: '/api/seo/schema-check', inputField: 'url' },
     { id: 'redirect-check', name: 'Redirect Check', icon: GitBranch, endpoint: '/api/seo/redirect-check', inputField: 'url' },
     { id: 'internal-links', name: 'Internal Links', icon: Link2, endpoint: '/api/seo/internal-links', inputField: 'url' },
-    { id: 'core-web-vitals', name: 'Core Web Vitals', icon: Gauge, endpoint: '/api/seo/core-web-vitals', inputField: 'url' },
     { id: 'canonical-check', name: 'Canonical Tag', icon: ShieldCheck, endpoint: '/api/seo/canonical-check', inputField: 'url' },
     { id: 'thin-content', name: 'Thin Content', icon: FileText, endpoint: '/api/seo/thin-content', inputField: 'url' },
     { id: 'orphan-pages', name: 'Orphan Pages', icon: AlertTriangle, endpoint: '/api/seo/orphan-pages', inputField: 'url' },
