@@ -9,7 +9,7 @@ import {
   Search, ShieldCheck, SpellCheck, History, Star,
   Copy, Check, Loader2, Wand2, TrendingUp, AlertCircle,
   Shield, Bot, Repeat, Hash, Eye, XCircle, CheckCircle2, ArrowRight,
-  Globe, X, ExternalLink, Webhook
+  Globe, X, ExternalLink, Webhook, Send
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { GuestStorage } from '@/lib/GuestStorage';
@@ -93,7 +93,7 @@ export default function DashboardContent() {
   const [genError, setGenError] = useState<string | null>(null);
 
   // WordPress publish modal state
-  const [showWpModal, setShowWpModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
   const [wpSites, setWpSites] = useState<WPSite[]>([]);
   const [wpSitesLoading, setWpSitesLoading] = useState(false);
   const [wpSelectedSiteId, setWpSelectedSiteId] = useState<string>('');
@@ -102,6 +102,9 @@ export default function DashboardContent() {
   const [wpResult, setWpResult] = useState<{ success: boolean; message: string; postUrl?: string | null } | null>(null);
   const [webhookPublishing, setWebhookPublishing] = useState(false);
   const [webhookResult, setWebhookResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [publishTab, setPublishTab] = useState<'wordpress' | 'webhook'>('wordpress');
+  const [publishResult, setPublishResult] = useState<{ success: boolean; message: string; postUrl?: string } | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     checkSession();
@@ -416,7 +419,7 @@ export default function DashboardContent() {
 
   const openWpModal = async () => {
     if (!content) return;
-    setShowWpModal(true);
+    setShowPublishModal(true);
     setWpResult(null);
     setWpSelectedSiteId('');
     setWpPublishStatus('draft');
@@ -511,6 +514,103 @@ export default function DashboardContent() {
       });
     } finally {
       setWebhookPublishing(false);
+    }
+  };
+
+  const openPublishModal = async () => {
+    if (!content) return;
+    setShowPublishModal(true);
+    setPublishResult(null);
+    setWpResult(null);
+    setWebhookResult(null);
+    setWpSelectedSiteId('');
+    setWpPublishStatus('draft');
+    setWpSitesLoading(true);
+    try {
+      const res = await fetch('/api/wordpress', { headers: { ...getAuthHeader() } });
+      const data = await res.json();
+      if (data.success) {
+        setWpSites(data.sites || []);
+        if ((data.sites || []).length > 0) {
+          setWpSelectedSiteId(data.sites[0]._id);
+          setWpPublishStatus(data.sites[0].defaultStatus || 'draft');
+          setPublishTab('wordpress');
+        } else {
+          setPublishTab('webhook');
+        }
+      } else {
+        setWpSites([]);
+        setPublishTab('webhook');
+      }
+    } catch {
+      setWpSites([]);
+      setPublishTab('webhook');
+    } finally {
+      setWpSitesLoading(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!content) return;
+    setPublishing(true);
+    setPublishResult(null);
+
+    try {
+      if (publishTab === 'wordpress') {
+        if (!wpSelectedSiteId) {
+          setPublishResult({ success: false, message: 'Select a WordPress site first.' });
+          setPublishing(false);
+          return;
+        }
+        const res = await fetch(`/api/wordpress/${wpSelectedSiteId}/publish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify({
+            title: title || 'Untitled',
+            content,
+            status: wpPublishStatus,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setPublishResult({
+            success: true,
+            message: `Published as ${wpPublishStatus}! Post ID: ${data.postId}`,
+            postUrl: data.postUrl || undefined,
+          });
+        } else {
+          setPublishResult({ success: false, message: data.error || 'Failed to publish' });
+        }
+      } else {
+        // Webhook publish — save content which triggers webhook events
+        const res = await fetch('/api/content/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify({
+            title: title || 'Untitled',
+            content,
+            type: 'generated',
+            tone,
+            length,
+            language,
+            seoKeywords,
+            plagiarismScore,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setPublishResult({
+            success: true,
+            message: 'Content sent to all connected webhook sites.',
+          });
+        } else {
+          setPublishResult({ success: false, message: data.error || 'Failed to send via webhook.' });
+        }
+      }
+    } catch (err: any) {
+      setPublishResult({ success: false, message: err.message || 'Network error.' });
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -828,24 +928,13 @@ export default function DashboardContent() {
                     <Download className="w-5 h-5 text-gray-700" />
                   </button>
                   <button
-                    onClick={openWpModal}
+                    onClick={openPublishModal}
                     disabled={!content}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition"
-                    title="Publish to WordPress"
+                    className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition flex items-center gap-1.5"
+                    title="Publish to Website"
                   >
-                    <Globe className="w-5 h-5 text-gray-700" />
-                  </button>
-                  <button
-                    onClick={handleWebhookPublish}
-                    disabled={!content || webhookPublishing}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition relative"
-                    title="Send to Webhook Sites"
-                  >
-                    {webhookPublishing ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
-                    ) : (
-                      <Webhook className="w-5 h-5 text-gray-700" />
-                    )}
+                    <Send className="w-4 h-4" />
+                    Publish
                   </button>
                   <button
                     onClick={saveContent}
@@ -1136,9 +1225,9 @@ export default function DashboardContent() {
           </div>
         )}
       </AnimatePresence>
-      {/* WordPress Publish Modal */}
+      {/* Unified Publish Modal */}
       <AnimatePresence>
-        {showWpModal && (
+        {showPublishModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -1148,135 +1237,181 @@ export default function DashboardContent() {
             >
               <div className="p-6 border-b border-gray-200 flex justify-between items-center">
                 <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-purple-600" />
-                  Publish to WordPress
+                  <Send className="w-5 h-5 text-purple-600" />
+                  Publish Content
                 </h3>
                 <button
-                  onClick={() => setShowWpModal(false)}
+                  onClick={() => setShowPublishModal(false)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition"
                 >
                   <X className="w-5 h-5 text-gray-700" />
                 </button>
               </div>
 
-              <div className="p-6 space-y-4 overflow-auto">
-                {wpSitesLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
-                    <span className="ml-2 text-gray-800 text-sm">Loading sites...</span>
-                  </div>
-                ) : wpSites.length === 0 ? (
-                  <div className="text-center py-6">
-                    <Globe className="w-10 h-10 mx-auto mb-2 text-gray-400" />
-                    <p className="text-gray-900 font-medium mb-1">No WordPress sites connected</p>
-                    <p className="text-sm text-gray-700 mb-4">
-                      Add a site first to publish content directly.
-                    </p>
-                    <Link
-                      href="/wordpress"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition"
-                    >
-                      <Globe className="w-4 h-4" />
-                      Go to WordPress Settings
-                    </Link>
-                  </div>
-                ) : (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-1">Select Site</label>
-                      <select
-                        value={wpSelectedSiteId}
-                        onChange={(e) => {
-                          setWpSelectedSiteId(e.target.value);
-                          const s = wpSites.find((x) => x._id === e.target.value);
-                          if (s) setWpPublishStatus(s.defaultStatus || 'draft');
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
-                      >
-                        {wpSites.map((s) => (
-                          <option key={s._id} value={s._id}>
-                            {s.siteName} — {s.siteUrl}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-1">Status</label>
-                      <select
-                        value={wpPublishStatus}
-                        onChange={(e) => setWpPublishStatus(e.target.value as 'draft' | 'publish')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
-                      >
-                        <option value="draft">Draft</option>
-                        <option value="publish">Publish immediately</option>
-                      </select>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-800">
-                      <p className="font-medium text-gray-900">Title:</p>
-                      <p className="mt-0.5 truncate">{title || '(no title)'}</p>
-                      <p className="font-medium text-gray-900 mt-2">Content length:</p>
-                      <p className="mt-0.5">{content.split(' ').length} words</p>
-                    </div>
+              {/* Tabs */}
+              <div className="flex border-b border-gray-200">
+                <button
+                  onClick={() => { setPublishTab('wordpress'); setPublishResult(null); }}
+                  className={`flex-1 px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 transition ${
+                    publishTab === 'wordpress'
+                      ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  <Globe className="w-4 h-4" />
+                  WordPress
+                </button>
+                <button
+                  onClick={() => { setPublishTab('webhook'); setPublishResult(null); }}
+                  className={`flex-1 px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 transition ${
+                    publishTab === 'webhook'
+                      ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  <Webhook className="w-4 h-4" />
+                  Custom Website (Webhook)
+                </button>
+              </div>
 
-                    {wpResult && (
-                      <div
-                        className={`p-3 rounded-lg text-sm flex items-start gap-2 ${
-                          wpResult.success
-                            ? 'bg-green-50 border border-green-200 text-green-800'
-                            : 'bg-red-50 border border-red-200 text-red-800'
-                        }`}
-                      >
-                        {wpResult.success ? (
-                          <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-medium">{wpResult.message}</p>
-                          {wpResult.success && wpResult.postUrl && (
-                            <a
-                              href={wpResult.postUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-purple-600 hover:underline mt-1 text-xs"
-                            >
-                              View post <ExternalLink className="w-3 h-3" />
-                            </a>
-                          )}
-                        </div>
+              <div className="p-6 space-y-4 overflow-auto flex-1">
+                {publishTab === 'wordpress' ? (
+                  <>
+                    {wpSitesLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+                        <span className="ml-2 text-gray-800 text-sm">Loading sites...</span>
                       </div>
+                    ) : wpSites.length === 0 ? (
+                      <div className="text-center py-6">
+                        <Globe className="w-10 h-10 mx-auto mb-2 text-gray-400" />
+                        <p className="text-gray-900 font-medium mb-1">No WordPress sites connected</p>
+                        <p className="text-sm text-gray-700 mb-4">Add a WordPress site to publish directly.</p>
+                        <Link
+                          href="/wordpress"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition"
+                        >
+                          <Globe className="w-4 h-4" />
+                          Go to WordPress Settings
+                        </Link>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-1">Select WordPress Site</label>
+                          <select
+                            value={wpSelectedSiteId}
+                            onChange={(e) => {
+                              setWpSelectedSiteId(e.target.value);
+                              const s = wpSites.find((x) => x._id === e.target.value);
+                              if (s) setWpPublishStatus(s.defaultStatus || 'draft');
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                          >
+                            {wpSites.map((s) => (
+                              <option key={s._id} value={s._id}>
+                                {s.siteName} — {s.siteUrl}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-1">Post Status</label>
+                          <select
+                            value={wpPublishStatus}
+                            onChange={(e) => setWpPublishStatus(e.target.value as 'draft' | 'publish')}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                          >
+                            <option value="draft">Draft (review before publishing)</option>
+                            <option value="publish">Publish immediately</option>
+                          </select>
+                        </div>
+                      </>
                     )}
                   </>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-800">
+                        This will save your content and send it to all connected webhook sites.
+                        The target website's webhook receiver will store it in their database.
+                      </p>
+                    </div>
+                    <Link
+                      href="/webhooks"
+                      className="inline-flex items-center gap-1.5 text-sm text-purple-600 hover:underline"
+                    >
+                      <Webhook className="w-4 h-4" />
+                      Manage webhook integrations →
+                    </Link>
+                  </div>
+                )}
+
+                {/* Content preview */}
+                <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-800">
+                  <p className="font-medium text-gray-900">Title: <span className="font-normal">{title || '(no title)'}</span></p>
+                  <p className="font-medium text-gray-900 mt-1">Content: <span className="font-normal">{content.split(' ').length} words</span></p>
+                </div>
+
+                {/* Publish result */}
+                {publishResult && (
+                  <div
+                    className={`p-3 rounded-lg text-sm flex items-start gap-2 ${
+                      publishResult.success
+                        ? 'bg-green-50 border border-green-200 text-green-800'
+                        : 'bg-red-50 border border-red-200 text-red-800'
+                    }`}
+                  >
+                    {publishResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-medium">{publishResult.message}</p>
+                      {publishResult.success && publishResult.postUrl && (
+                        <a
+                          href={publishResult.postUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-purple-600 hover:underline mt-1 text-xs"
+                        >
+                          View published post <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 
-              {wpSites.length > 0 && (
-                <div className="p-6 border-t border-gray-200 flex gap-3">
+              {/* Footer with Publish button */}
+              <div className="p-6 border-t border-gray-200 flex gap-3">
+                <button
+                  onClick={() => setShowPublishModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-800 hover:bg-gray-50 transition"
+                >
+                  Close
+                </button>
+                {!(publishTab === 'wordpress' && wpSites.length === 0) && (
                   <button
-                    onClick={() => setShowWpModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-800 hover:bg-gray-50 transition"
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={handleWpPublish}
-                    disabled={wpPublishing || !wpSelectedSiteId}
+                    onClick={handlePublish}
+                    disabled={publishing || (publishTab === 'wordpress' && !wpSelectedSiteId)}
                     className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {wpPublishing ? (
+                    {publishing ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
                         Publishing...
                       </>
                     ) : (
                       <>
-                        <Globe className="w-4 h-4" />
-                        Publish to WordPress
+                        <Send className="w-4 h-4" />
+                        {publishTab === 'wordpress' ? 'Publish to WordPress' : 'Send to Webhook Sites'}
                       </>
                     )}
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </motion.div>
           </div>
         )}
