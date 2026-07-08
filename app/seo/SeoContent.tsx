@@ -1487,9 +1487,6 @@ function SeoToolsResults({ url, getAuthHeader, merged }: { url: string; getAuthH
       const autoResults = (window as any).__seoAutoResults;
       if (autoResults && Object.keys(autoResults).length > 0) {
         setToolResults(autoResults);
-        // Auto-expand the first result
-        const firstKey = Object.keys(autoResults)[0];
-        setActiveTool(firstKey);
         setAutoRunDone(true);
       }
     };
@@ -1560,58 +1557,37 @@ function SeoToolsResults({ url, getAuthHeader, merged }: { url: string; getAuthH
           </div>
         )}
 
-        {/* Tool buttons */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        {/* All advanced tool results shown inline — no clicks needed */}
+        <div className="space-y-2">
           {tools.map((tool) => {
             const Icon = tool.icon;
-            const isActive = activeTool === tool.id;
+            const result = toolResults[tool.id];
             const isLoading = toolLoading === tool.id;
-            const hasResult = !!toolResults[tool.id];
-            const hasError = !!toolErrors[tool.id];
+            const error = toolErrors[tool.id];
             return (
-              <button
-                key={tool.id}
-                onClick={() => {
-                  if (!hasResult && !isLoading) runTool(tool.id, tool.endpoint);
-                  else setActiveTool(isActive ? null : tool.id);
-                }}
-                className={`p-3 rounded-xl border text-left transition ${
-                  isActive
-                    ? 'border-purple-400 bg-purple-50'
-                    : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Icon className={`w-4 h-4 ${hasResult ? 'text-green-600' : 'text-purple-600'}`} />
+              <div key={tool.id} className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon className="w-4 h-4 text-purple-600" />
                   <span className="text-xs font-semibold text-gray-900">{tool.name}</span>
                   {isLoading && <Loader2 className="w-3 h-3 animate-spin text-purple-600 ml-auto" />}
-                  {hasResult && !isLoading && <Check className="w-3 h-3 text-green-600 ml-auto" />}
-                  {hasError && !isLoading && <XCircle className="w-3 h-3 text-red-500 ml-auto" />}
+                  {result?.success && !isLoading && <Check className="w-3 h-3 text-green-600 ml-auto" />}
+                  {error && !isLoading && <XCircle className="w-3 h-3 text-red-500 ml-auto" />}
+                  {!result && !isLoading && !error && (
+                    <button
+                      onClick={() => runTool(tool.id, tool.endpoint)}
+                      className="ml-auto text-xs text-purple-600 hover:underline"
+                    >
+                      Run
+                    </button>
+                  )}
                 </div>
-                <p className="text-[11px] text-gray-600">
-                  {hasResult ? 'Click to view results' : 'Click to run analysis'}
-                </p>
-              </button>
+                {result?.success && <ToolResultDisplay toolId={tool.id} data={result} />}
+                {error && <p className="text-xs text-red-600">{error}</p>}
+                {!result && !isLoading && !error && <p className="text-[11px] text-gray-500">Not yet run.</p>}
+              </div>
             );
           })}
         </div>
-
-        {/* Tool results */}
-        <AnimatePresence>
-          {activeTool && toolResults[activeTool] && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <ToolResultDisplay toolId={activeTool} data={toolResults[activeTool]} />
-            </motion.div>
-          )}
-          {activeTool && toolErrors[activeTool] && (
-            <ErrorBanner message={toolErrors[activeTool]} />
-          )}
-        </AnimatePresence>
 
         {/* Schema Generator + Search Intent + Keyword Difficulty (standalone tools) */}
         <div className="mt-4 pt-4 border-t border-gray-100">
