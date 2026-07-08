@@ -36,6 +36,7 @@ import {
   MapPin,
   ShoppingBag,
   Compass,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -623,18 +624,19 @@ function SeoAuditPanel() {
           runTool('/api/seo/schema-check', { url: auditedUrl }),
           runTool('/api/seo/redirect-check', { url: auditedUrl }),
           runTool('/api/seo/internal-links', { url: auditedUrl }),
-          fastMode ? Promise.resolve(null) : runTool('/api/seo/core-web-vitals', { url: auditedUrl }),
+          fastMode ? Promise.resolve(null) : runTool('/api/seo/core-web-vitals', { url: auditedUrl }).catch(() => null),
           runTool('/api/seo/canonical-check', { url: auditedUrl }),
           runTool('/api/seo/thin-content', { url: auditedUrl }),
           runTool('/api/seo/orphan-pages', { url: auditedUrl }),
         ]);
 
-        // Store results
+        // Store results — skip failed tools gracefully
         const autoResults: Record<string, any> = {};
         if (schemaData?.success) autoResults['schema-check'] = schemaData;
         if (redirectData?.success) autoResults['redirect-check'] = redirectData;
         if (linksData?.success) autoResults['internal-links'] = linksData;
         if (vitalsData?.success) autoResults['core-web-vitals'] = vitalsData;
+        else if (!fastMode) autoResults['core-web-vitals'] = { success: false, error: 'Google PageSpeed Insights is rate-limited (429). Try again later or use fast mode.' };
         if (canonicalData?.success) autoResults['canonical-check'] = canonicalData;
         if (thinData?.success) autoResults['thin-content'] = thinData;
         if (orphanData?.success) autoResults['orphan-pages'] = orphanData;
