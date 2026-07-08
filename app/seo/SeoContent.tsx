@@ -26,6 +26,16 @@ import {
   Sparkles,
   RefreshCw,
   ExternalLink,
+  GitBranch,
+  Brain,
+  BarChart3,
+  Link2,
+  X,
+  TrendingUp,
+  Target,
+  MapPin,
+  ShoppingBag,
+  Compass,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -472,6 +482,87 @@ function ProgressOverlay({ message }: { message: string }) {
 // ============================================================
 
 export default function SeoContent() {
+  const [activeTab, setActiveTab] = useState<'audit' | 'tools'>('audit');
+
+  return (
+    <div className="bg-gray-50 min-h-screen pt-4 pb-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl">
+            <Search className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">SEO Suite</h1>
+            <p className="text-sm text-gray-600">
+              Audit any URL, then get ready-to-paste fixes — plus 8 free SEO tools.
+            </p>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm w-fit">
+          <button
+            onClick={() => setActiveTab('audit')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition ${
+              activeTab === 'audit'
+                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow'
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <Gauge className="w-4 h-4" />
+            SEO Audit
+          </button>
+          <button
+            onClick={() => setActiveTab('tools')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition ${
+              activeTab === 'tools'
+                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow'
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <Wrench className="w-4 h-4" />
+            SEO Tools
+            <span className="text-[10px] font-semibold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">
+              8
+            </span>
+          </button>
+        </div>
+
+        {/* Tab content */}
+        <AnimatePresence mode="wait">
+          {activeTab === 'audit' ? (
+            <motion.div
+              key="audit"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <SeoAuditPanel />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="tools"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <SeoToolsPanel />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// SEO Audit Panel (existing audit functionality)
+// ============================================================
+
+function SeoAuditPanel() {
   const { isGuest, guestSession, getAuthHeader } = useAuth();
 
   const [url, setUrl] = useState('');
@@ -729,8 +820,9 @@ export default function SeoContent() {
           setApplyResult({ success: false, message: data.error || 'Failed to send via webhook.' });
         }
       }
-    } catch (err: any) {
-      setApplyResult({ success: false, message: err.message || 'Network error.' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Network error.';
+      setApplyResult({ success: false, message });
     } finally {
       setApplying(false);
     }
@@ -763,21 +855,7 @@ export default function SeoContent() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen pt-4 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl">
-            <Search className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">SEO Audit &amp; Fixer</h1>
-            <p className="text-sm text-gray-600">
-              Audit any URL, then get ready-to-paste fixes.
-            </p>
-          </div>
-        </div>
-
+    <div className="space-y-6">
         {/* URL form */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
           <div className="flex flex-col md:flex-row gap-3">
@@ -1249,7 +1327,7 @@ export default function SeoContent() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-sm text-blue-800">
                         The SEO fix report will be sent to all connected webhook sites.
-                        The target website's webhook receiver will store it in their database.
+                        The target website&apos;s webhook receiver will store it in their database.
                       </p>
                       <a href="/webhooks" className="inline-flex items-center gap-1 text-sm text-purple-600 hover:underline mt-2">
                         <Sparkles className="w-4 h-4" />
@@ -1401,6 +1479,1285 @@ export default function SeoContent() {
             </p>
           )}
         </div>
+    </div>
+  );
+}
+
+// ============================================================
+// SEO Tools Panel (8 free tools)
+// ============================================================
+
+type ToolId =
+  | 'schema-check'
+  | 'schema-generate'
+  | 'redirect-check'
+  | 'search-intent'
+  | 'keyword-difficulty'
+  | 'internal-links'
+  | 'duplicate-content'
+  | 'core-web-vitals';
+
+interface ToolMeta {
+  id: ToolId;
+  name: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  gradient: string;
+  iconBg: string;
+}
+
+// ---- Tool result types (mirror API responses) ----
+interface SchemaCheckItem {
+  type: string;
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  raw: unknown;
+}
+interface SchemaCheckResultData {
+  hasSchema: boolean;
+  count: number;
+  schemas: SchemaCheckItem[];
+  url?: string;
+}
+
+interface SchemaGenerateResultData {
+  type: string;
+  schema: string;
+  html: string;
+}
+
+interface RedirectHop {
+  url: string;
+  status: number;
+  location: string | null;
+  type: string;
+}
+interface RedirectCheckResultData {
+  chain: RedirectHop[];
+  finalUrl: string;
+  totalRedirects: number;
+  hasLoop: boolean;
+  isChain: boolean;
+  warnings: string[];
+}
+
+interface SearchIntentResultData {
+  keyword: string;
+  intent: string;
+  confidence: number;
+  signals: string[];
+  suggestions: string[];
+}
+
+interface DifficultyFactor {
+  name: string;
+  impact: 'positive' | 'negative' | 'neutral';
+  detail: string;
+  delta: number;
+}
+interface KeywordDifficultyResultData {
+  keyword: string;
+  difficulty: number;
+  level: string;
+  factors: DifficultyFactor[];
+}
+
+interface InternalLinkItem {
+  url: string;
+  anchorText: string;
+  nofollow: boolean;
+  status: number | 'skipped' | 'error';
+  isBroken: boolean;
+}
+interface InternalLinksResultData {
+  totalLinks: number;
+  internalLinksCount: number;
+  externalLinksCount: number;
+  internalLinks: InternalLinkItem[];
+  externalLinks: string[];
+  targetKeywords: string[];
+  suggestions: string[];
+}
+
+interface DuplicateContentResultData {
+  url1: string;
+  url2: string;
+  similarity: number;
+  level: string;
+  metrics: { jaccard: number; cosine: number; sentenceOverlap: number };
+  commonSentences: string[];
+  recommendation: string;
+}
+
+interface CwvMetric {
+  id: string;
+  title: string;
+  value: number;
+  unit: string;
+  score: number | null;
+  displayValue: string;
+  target: string;
+  status: 'good' | 'needs-improvement' | 'poor' | 'unknown';
+}
+interface CoreWebVitalsResultData {
+  metrics: Record<string, CwvMetric | undefined>;
+  scores: {
+    performance: number | null;
+    seo: number | null;
+    accessibility: number | null;
+    bestPractices: number | null;
+  };
+  recommendations: string[];
+  finalUrl: string;
+  fetchTime: string;
+}
+
+const TOOLS: ToolMeta[] = [
+  {
+    id: 'schema-check',
+    name: 'Schema Markup Checker',
+    description: 'Validate JSON-LD structured data on any page.',
+    icon: Code2,
+    gradient: 'from-purple-500 to-indigo-500',
+    iconBg: 'bg-purple-100 text-purple-700',
+  },
+  {
+    id: 'schema-generate',
+    name: 'Schema Generator',
+    description: 'Generate valid JSON-LD for Organization, Article, Product, LocalBusiness.',
+    icon: Wrench,
+    gradient: 'from-blue-500 to-cyan-500',
+    iconBg: 'bg-blue-100 text-blue-700',
+  },
+  {
+    id: 'redirect-check',
+    name: 'Redirect Checker',
+    description: 'Trace 301/302/307/308 redirect chains and loops.',
+    icon: GitBranch,
+    gradient: 'from-emerald-500 to-teal-500',
+    iconBg: 'bg-emerald-100 text-emerald-700',
+  },
+  {
+    id: 'search-intent',
+    name: 'Search Intent Detector',
+    description: 'Classify any keyword by intent (transactional, informational, etc.).',
+    icon: Brain,
+    gradient: 'from-pink-500 to-rose-500',
+    iconBg: 'bg-pink-100 text-pink-700',
+  },
+  {
+    id: 'keyword-difficulty',
+    name: 'Keyword Difficulty Estimator',
+    description: 'Estimate keyword difficulty (0-100) with heuristics.',
+    icon: BarChart3,
+    gradient: 'from-amber-500 to-orange-500',
+    iconBg: 'bg-amber-100 text-amber-700',
+  },
+  {
+    id: 'internal-links',
+    name: 'Internal Link Analyzer',
+    description: 'Audit internal links, anchor text, nofollow and broken links.',
+    icon: Link2,
+    gradient: 'from-indigo-500 to-violet-500',
+    iconBg: 'bg-indigo-100 text-indigo-700',
+  },
+  {
+    id: 'duplicate-content',
+    name: 'Duplicate Content Checker',
+    description: 'Compare two URLs and detect duplicate content.',
+    icon: Copy,
+    gradient: 'from-fuchsia-500 to-pink-500',
+    iconBg: 'bg-fuchsia-100 text-fuchsia-700',
+  },
+  {
+    id: 'core-web-vitals',
+    name: 'Core Web Vitals Report',
+    description: 'Get LCP, CLS, FCP, TBT and PageSpeed scores via Google PSI.',
+    icon: Gauge,
+    gradient: 'from-cyan-500 to-blue-500',
+    iconBg: 'bg-cyan-100 text-cyan-700',
+  },
+];
+
+// Small reusable UI helpers
+function ToolCard({ tool, onClick }: { tool: ToolMeta; onClick: () => void }) {
+  const Icon = tool.icon;
+  return (
+    <motion.button
+      whileHover={{ y: -3 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className="text-left bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all"
+    >
+      <div className={`w-10 h-10 rounded-xl ${tool.iconBg} flex items-center justify-center mb-3`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <h3 className="font-semibold text-gray-900 text-sm mb-1">{tool.name}</h3>
+      <p className="text-xs text-gray-600 leading-relaxed">{tool.description}</p>
+      <div className="mt-3 flex items-center gap-1 text-xs font-medium text-purple-600">
+        Open tool <ChevronRight className="w-3.5 h-3.5" />
+      </div>
+    </motion.button>
+  );
+}
+
+function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          /* noop */
+        }
+      }}
+      className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 font-medium"
+    >
+      {copied ? (
+        <>
+          <Check className="w-3.5 h-3.5" /> Copied
+        </>
+      ) : (
+        <>
+          <Copy className="w-3.5 h-3.5" /> {label}
+        </>
+      )}
+    </button>
+  );
+}
+
+function CodeResultBlock({ code, label }: { code: string; label: string }) {
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center gap-2 min-w-0">
+          <Code2 className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+          <span className="text-xs font-semibold text-gray-700 truncate">{label}</span>
+        </div>
+        <CopyButton text={code} />
+      </div>
+      <pre className="text-xs leading-relaxed p-3 overflow-auto max-h-80 bg-gray-900 text-gray-100">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+function ErrorBanner({ message }: { message: string }) {
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+      <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+      <div className="text-sm text-red-700">
+        <div className="font-semibold mb-0.5">Tool failed</div>
+        {message}
+      </div>
+    </div>
+  );
+}
+
+// ---- Schema Generator field configs ----
+interface SchemaField {
+  key: string;
+  label: string;
+  placeholder: string;
+  required?: boolean;
+  textarea?: boolean;
+}
+
+const SCHEMA_FIELDS: Record<string, SchemaField[]> = {
+  Organization: [
+    { key: 'name', label: 'Organization Name', placeholder: 'Acme Inc.', required: true },
+    { key: 'url', label: 'Website URL', placeholder: 'https://acme.com', required: true },
+    { key: 'logo', label: 'Logo URL', placeholder: 'https://acme.com/logo.png' },
+    { key: 'description', label: 'Description', placeholder: 'Short description...', textarea: true },
+    { key: 'email', label: 'Email', placeholder: 'info@acme.com' },
+    { key: 'phone', label: 'Phone', placeholder: '+1-555-0100' },
+    { key: 'sameAs', label: 'Social Profiles (comma-separated)', placeholder: 'https://twitter.com/acme, https://github.com/acme' },
+  ],
+  Article: [
+    { key: 'headline', label: 'Headline', placeholder: 'My Article Title', required: true },
+    { key: 'author', label: 'Author', placeholder: 'Jane Doe', required: true },
+    { key: 'datePublished', label: 'Date Published (YYYY-MM-DD)', placeholder: '2024-01-15', required: true },
+    { key: 'image', label: 'Image URL', placeholder: 'https://...' },
+    { key: 'publisher', label: 'Publisher Name', placeholder: 'Acme Blog' },
+    { key: 'publisherLogo', label: 'Publisher Logo URL', placeholder: 'https://...' },
+    { key: 'url', label: 'Article URL', placeholder: 'https://acme.com/article' },
+  ],
+  Product: [
+    { key: 'name', label: 'Product Name', placeholder: 'Widget X', required: true },
+    { key: 'description', label: 'Description', placeholder: 'Short description...', textarea: true },
+    { key: 'brand', label: 'Brand', placeholder: 'Acme' },
+    { key: 'image', label: 'Image URL', placeholder: 'https://...' },
+    { key: 'sku', label: 'SKU', placeholder: 'WIDG-001' },
+    { key: 'price', label: 'Price', placeholder: '29.99', required: true },
+    { key: 'currency', label: 'Currency', placeholder: 'USD' },
+    { key: 'availability', label: 'Availability', placeholder: 'https://schema.org/InStock' },
+    { key: 'ratingValue', label: 'Rating Value', placeholder: '4.5' },
+    { key: 'reviewCount', label: 'Review Count', placeholder: '128' },
+  ],
+  LocalBusiness: [
+    { key: 'name', label: 'Business Name', placeholder: 'Acme Coffee', required: true },
+    { key: 'url', label: 'Website URL', placeholder: 'https://acme.coffee', required: true },
+    { key: 'telephone', label: 'Telephone', placeholder: '+1-555-0100' },
+    { key: 'streetAddress', label: 'Street Address', placeholder: '123 Main St' },
+    { key: 'addressLocality', label: 'City', placeholder: 'Springfield' },
+    { key: 'addressRegion', label: 'State/Region', placeholder: 'IL' },
+    { key: 'postalCode', label: 'Postal Code', placeholder: '62701' },
+    { key: 'addressCountry', label: 'Country', placeholder: 'US' },
+    { key: 'latitude', label: 'Latitude', placeholder: '39.78' },
+    { key: 'longitude', label: 'Longitude', placeholder: '-89.64' },
+    { key: 'openingHours', label: 'Opening Hours', placeholder: 'Mo-Fr 09:00-17:00' },
+    { key: 'priceRange', label: 'Price Range', placeholder: '$$' },
+  ],
+};
+
+function SeoToolsPanel() {
+  const [openTool, setOpenTool] = useState<ToolId | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+
+  // Per-tool input state
+  const [urlInput, setUrlInput] = useState('');
+  const [url1Input, setUrl1Input] = useState('');
+  const [url2Input, setUrl2Input] = useState('');
+  const [keywordsInput, setKeywordsInput] = useState('');
+  const [keywordInput, setKeywordInput] = useState('');
+  const [schemaType, setSchemaType] = useState<'Organization' | 'Article' | 'Product' | 'LocalBusiness'>('Organization');
+  const [schemaData, setSchemaData] = useState<Record<string, string>>({});
+  const [psiStrategy, setPsiStrategy] = useState<'mobile' | 'desktop'>('mobile');
+
+  const resetState = () => {
+    setError(null);
+    setResult(null);
+  };
+
+  const closeTool = () => {
+    setOpenTool(null);
+    resetState();
+  };
+
+  const runTool = async (tool: ToolId) => {
+    setLoading(true);
+    resetState();
+    try {
+      let endpoint = '';
+      let body: Record<string, unknown> = {};
+
+      switch (tool) {
+        case 'schema-check':
+          endpoint = '/api/seo/schema-check';
+          body = { url: urlInput };
+          break;
+        case 'schema-generate':
+          endpoint = '/api/seo/schema-generate';
+          body = { type: schemaType, data: schemaData };
+          break;
+        case 'redirect-check':
+          endpoint = '/api/seo/redirect-check';
+          body = { url: urlInput };
+          break;
+        case 'search-intent':
+          endpoint = '/api/seo/search-intent';
+          body = { keyword: keywordInput };
+          break;
+        case 'keyword-difficulty':
+          endpoint = '/api/seo/keyword-difficulty';
+          body = { keyword: keywordInput };
+          break;
+        case 'internal-links':
+          endpoint = '/api/seo/internal-links';
+          body = { url: urlInput, keywords: keywordsInput };
+          break;
+        case 'duplicate-content':
+          endpoint = '/api/seo/duplicate-content';
+          body = { url1: url1Input, url2: url2Input };
+          break;
+        case 'core-web-vitals':
+          endpoint = '/api/seo/core-web-vitals';
+          body = { url: urlInput, strategy: psiStrategy };
+          break;
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json()) as { success: boolean; error?: string; [key: string]: unknown };
+      if (!data.success) {
+        setError(data.error || 'Request failed.');
+      } else {
+        setResult(data as Record<string, unknown>);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Network error';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openMeta = TOOLS.find((t) => t.id === openTool) || null;
+
+  return (
+    <div className="space-y-6">
+      {/* Intro card */}
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-5 text-white">
+        <div className="flex items-center gap-3">
+          <Wrench className="w-6 h-6 flex-shrink-0" />
+          <div>
+            <h2 className="font-bold">8 Free SEO Tools</h2>
+            <p className="text-sm text-purple-100">
+              No paid APIs required. Pick a tool to get started.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tool grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {TOOLS.map((tool) => (
+          <ToolCard
+            key={tool.id}
+            tool={tool}
+            onClick={() => {
+              setOpenTool(tool.id);
+              resetState();
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Modal */}
+      <AnimatePresence>
+        {openMeta && (
+          <div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={closeTool}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl max-w-3xl w-full overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              {/* Modal header */}
+              <div className="p-5 border-b border-gray-200 flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-lg ${openMeta.iconBg} flex items-center justify-center flex-shrink-0`}>
+                  <openMeta.icon className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-gray-900">{openMeta.name}</h3>
+                  <p className="text-xs text-gray-600 truncate">{openMeta.description}</p>
+                </div>
+                <button
+                  onClick={closeTool}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5 text-gray-700" />
+                </button>
+              </div>
+
+              {/* Modal body */}
+              <div className="p-5 overflow-auto flex-1 space-y-4">
+                {/* Inputs */}
+                <ToolInputs
+                  tool={openMeta.id}
+                  urlInput={urlInput}
+                  setUrlInput={setUrlInput}
+                  url1Input={url1Input}
+                  setUrl1Input={setUrl1Input}
+                  url2Input={url2Input}
+                  setUrl2Input={setUrl2Input}
+                  keywordsInput={keywordsInput}
+                  setKeywordsInput={setKeywordsInput}
+                  keywordInput={keywordInput}
+                  setKeywordInput={setKeywordInput}
+                  schemaType={schemaType}
+                  setSchemaType={setSchemaType}
+                  schemaData={schemaData}
+                  setSchemaData={setSchemaData}
+                  psiStrategy={psiStrategy}
+                  setPsiStrategy={setPsiStrategy}
+                />
+
+                {/* Run button */}
+                <button
+                  onClick={() => runTool(openMeta.id)}
+                  disabled={loading}
+                  className="w-full px-4 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Running…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" /> Run {openMeta.name}
+                    </>
+                  )}
+                </button>
+
+                {/* Error */}
+                {error && <ErrorBanner message={error} />}
+
+                {/* Result */}
+                {result && !error && (
+                  <ToolResult tool={openMeta.id} result={result as unknown} />
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ---- Inputs component ----
+interface ToolInputsProps {
+  tool: ToolId;
+  urlInput: string;
+  setUrlInput: (v: string) => void;
+  url1Input: string;
+  setUrl1Input: (v: string) => void;
+  url2Input: string;
+  setUrl2Input: (v: string) => void;
+  keywordsInput: string;
+  setKeywordsInput: (v: string) => void;
+  keywordInput: string;
+  setKeywordInput: (v: string) => void;
+  schemaType: 'Organization' | 'Article' | 'Product' | 'LocalBusiness';
+  setSchemaType: (v: 'Organization' | 'Article' | 'Product' | 'LocalBusiness') => void;
+  schemaData: Record<string, string>;
+  setSchemaData: (v: Record<string, string>) => void;
+  psiStrategy: 'mobile' | 'desktop';
+  setPsiStrategy: (v: 'mobile' | 'desktop') => void;
+}
+
+function InputLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
+  return (
+    <label className="block text-xs font-semibold text-gray-700 mb-1">
+      {children} {required && <span className="text-red-500">*</span>}
+    </label>
+  );
+}
+
+const inputClass =
+  'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-gray-900';
+
+function ToolInputs(props: ToolInputsProps) {
+  switch (props.tool) {
+    case 'schema-check':
+    case 'redirect-check':
+    case 'core-web-vitals':
+      return (
+        <div className="space-y-3">
+          <div>
+            <InputLabel required>URL</InputLabel>
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={props.urlInput}
+                onChange={(e) => props.setUrlInput(e.target.value)}
+                placeholder="example.com or https://example.com/page"
+                className={inputClass + ' pl-9'}
+              />
+            </div>
+          </div>
+          {props.tool === 'core-web-vitals' && (
+            <div className="flex gap-2">
+              {(['mobile', 'desktop'] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => props.setPsiStrategy(s)}
+                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
+                    props.psiStrategy === s
+                      ? 'bg-purple-50 border-purple-300 text-purple-700'
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {s === 'mobile' ? 'Mobile' : 'Desktop'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+
+    case 'schema-generate':
+      return (
+        <div className="space-y-3">
+          <div>
+            <InputLabel required>Schema Type</InputLabel>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {(['Organization', 'Article', 'Product', 'LocalBusiness'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => {
+                    props.setSchemaType(t);
+                    props.setSchemaData({});
+                  }}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition ${
+                    props.schemaType === t
+                      ? 'bg-purple-50 border-purple-300 text-purple-700'
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {SCHEMA_FIELDS[props.schemaType].map((f) => (
+              <div key={f.key} className={f.textarea ? 'sm:col-span-2' : ''}>
+                <InputLabel required={f.required}>{f.label}</InputLabel>
+                {f.textarea ? (
+                  <textarea
+                    value={props.schemaData[f.key] || ''}
+                    onChange={(e) =>
+                      props.setSchemaData({ ...props.schemaData, [f.key]: e.target.value })
+                    }
+                    placeholder={f.placeholder}
+                    rows={2}
+                    className={inputClass}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={props.schemaData[f.key] || ''}
+                    onChange={(e) =>
+                      props.setSchemaData({ ...props.schemaData, [f.key]: e.target.value })
+                    }
+                    placeholder={f.placeholder}
+                    className={inputClass}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'search-intent':
+    case 'keyword-difficulty':
+      return (
+        <div className="space-y-3">
+          <div>
+            <InputLabel required>Keyword</InputLabel>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={props.keywordInput}
+                onChange={(e) => props.setKeywordInput(e.target.value)}
+                placeholder="e.g. best running shoes for beginners"
+                className={inputClass + ' pl-9'}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.preventDefault();
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'internal-links':
+      return (
+        <div className="space-y-3">
+          <div>
+            <InputLabel required>URL</InputLabel>
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={props.urlInput}
+                onChange={(e) => props.setUrlInput(e.target.value)}
+                placeholder="example.com/page"
+                className={inputClass + ' pl-9'}
+              />
+            </div>
+          </div>
+          <div>
+            <InputLabel>Target keywords (comma-separated, optional)</InputLabel>
+            <input
+              type="text"
+              value={props.keywordsInput}
+              onChange={(e) => props.setKeywordsInput(e.target.value)}
+              placeholder="running shoes, marathon, beginners"
+              className={inputClass}
+            />
+          </div>
+        </div>
+      );
+
+    case 'duplicate-content':
+      return (
+        <div className="space-y-3">
+          <div>
+            <InputLabel required>URL 1</InputLabel>
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={props.url1Input}
+                onChange={(e) => props.setUrl1Input(e.target.value)}
+                placeholder="example.com/page-a"
+                className={inputClass + ' pl-9'}
+              />
+            </div>
+          </div>
+          <div>
+            <InputLabel required>URL 2</InputLabel>
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={props.url2Input}
+                onChange={(e) => props.setUrl2Input(e.target.value)}
+                placeholder="example.com/page-b"
+                className={inputClass + ' pl-9'}
+              />
+            </div>
+          </div>
+        </div>
+      );
+
+    default:
+      return null;
+  }
+}
+
+// ---- Result renderer ----
+function ToolResult({ tool, result }: { tool: ToolId; result: unknown }) {
+  switch (tool) {
+    case 'schema-check':
+      return <SchemaCheckResult result={result as SchemaCheckResultData} />;
+    case 'schema-generate':
+      return <SchemaGenerateResult result={result as SchemaGenerateResultData} />;
+    case 'redirect-check':
+      return <RedirectCheckResult result={result as RedirectCheckResultData} />;
+    case 'search-intent':
+      return <SearchIntentResult result={result as SearchIntentResultData} />;
+    case 'keyword-difficulty':
+      return <KeywordDifficultyResult result={result as KeywordDifficultyResultData} />;
+    case 'internal-links':
+      return <InternalLinksResult result={result as InternalLinksResultData} />;
+    case 'duplicate-content':
+      return <DuplicateContentResult result={result as DuplicateContentResultData} />;
+    case 'core-web-vitals':
+      return <CoreWebVitalsResult result={result as CoreWebVitalsResultData} />;
+    default:
+      return null;
+  }
+}
+
+// ---- Result components ----
+
+function ResultSection({ title, icon: Icon, children }: { title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
+  return (
+    <div className="border border-gray-200 rounded-xl bg-white p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Icon className="w-4 h-4 text-purple-600" />
+        <h4 className="text-sm font-bold text-gray-900">{title}</h4>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function SchemaCheckResult({ result }: { result: SchemaCheckResultData }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={`text-xs font-semibold uppercase px-2.5 py-1 rounded-full border ${result.hasSchema ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+          {result.hasSchema ? `${result.count} schema block(s) found` : 'No schema found'}
+        </span>
+      </div>
+
+      {!result.hasSchema && (
+        <p className="text-sm text-gray-700">
+          No JSON-LD structured data was found on this page. Use the Schema Generator to create markup.
+        </p>
+      )}
+
+      {result.schemas?.map((s, i) => (
+        <div key={i} className="border border-gray-200 rounded-xl bg-white p-4">
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <span className="font-mono text-sm font-semibold text-gray-900">{s.type || 'Unknown'}</span>
+            <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded border ${s.valid ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+              {s.valid ? 'valid' : 'invalid'}
+            </span>
+          </div>
+          {s.errors?.length > 0 && (
+            <div className="mb-2">
+              <div className="text-xs font-semibold text-red-700 mb-1">Errors</div>
+              <ul className="text-xs text-red-600 list-disc list-inside space-y-0.5">
+                {s.errors.map((e: string, j: number) => <li key={j}>{e}</li>)}
+              </ul>
+            </div>
+          )}
+          {s.warnings?.length > 0 && (
+            <div className="mb-2">
+              <div className="text-xs font-semibold text-amber-700 mb-1">Warnings</div>
+              <ul className="text-xs text-amber-600 list-disc list-inside space-y-0.5">
+                {s.warnings.map((w: string, j: number) => <li key={j}>{w}</li>)}
+              </ul>
+            </div>
+          )}
+          {s.raw !== null && s.raw !== undefined && (
+            <details className="mt-2">
+              <summary className="text-xs text-purple-600 cursor-pointer font-medium">View raw JSON</summary>
+              <pre className="text-[11px] bg-gray-900 text-gray-100 p-2 rounded mt-1 overflow-auto max-h-48">
+                {JSON.stringify(s.raw, null, 2)}
+              </pre>
+            </details>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SchemaGenerateResult({ result }: { result: SchemaGenerateResultData }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <CheckCircle2 className="w-4 h-4 text-green-600" />
+        <span className="text-sm font-semibold text-gray-900">Generated {result.type} schema</span>
+      </div>
+      <CodeResultBlock code={result.schema} label="JSON-LD Schema" />
+      <CodeResultBlock code={result.html} label="HTML Script Tag (paste into <head>)" />
+    </div>
+  );
+}
+
+function RedirectCheckResult({ result }: { result: RedirectCheckResultData }) {
+  const statusColor = (type: string) => {
+    if (type === '301' || type === '308') return 'bg-green-50 text-green-700 border-green-200';
+    if (type === '302' || type === '307') return 'bg-amber-50 text-amber-700 border-amber-200';
+    if (type === 'loop') return 'bg-red-50 text-red-700 border-red-200';
+    if (type === 'error') return 'bg-red-50 text-red-700 border-red-200';
+    if (type === 'max_reached') return 'bg-red-50 text-red-700 border-red-200';
+    return 'bg-gray-50 text-gray-700 border-gray-200';
+  };
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 text-center">
+          <div className="text-lg font-bold text-gray-900">{result.totalRedirects}</div>
+          <div className="text-[10px] text-gray-600 uppercase font-medium">Redirects</div>
+        </div>
+        <div className={`border rounded-lg p-2 text-center ${result.hasLoop ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+          <div className={`text-lg font-bold ${result.hasLoop ? 'text-red-700' : 'text-green-700'}`}>{result.hasLoop ? 'Yes' : 'No'}</div>
+          <div className="text-[10px] text-gray-600 uppercase font-medium">Loop</div>
+        </div>
+        <div className={`border rounded-lg p-2 text-center ${result.isChain ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
+          <div className={`text-lg font-bold ${result.isChain ? 'text-amber-700' : 'text-green-700'}`}>{result.isChain ? 'Yes' : 'No'}</div>
+          <div className="text-[10px] text-gray-600 uppercase font-medium">Chain</div>
+        </div>
+      </div>
+
+      <ResultSection title="Redirect chain" icon={GitBranch}>
+        <div className="space-y-2">
+          {result.chain?.map((hop, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                {i + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded border ${statusColor(hop.type)}`}>
+                    {hop.status || hop.type}
+                  </span>
+                  <a
+                    href={hop.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-purple-600 hover:underline truncate"
+                  >
+                    {hop.url || '(empty)'}
+                  </a>
+                </div>
+                {hop.location && (
+                  <div className="text-[11px] text-gray-500 mt-0.5">→ {hop.location}</div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </ResultSection>
+
+      {result.finalUrl && (
+        <div className="text-xs text-gray-700">
+          <span className="font-semibold">Final URL:</span>{' '}
+          <a href={result.finalUrl} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline break-all">
+            {result.finalUrl}
+          </a>
+        </div>
+      )}
+
+      {result.warnings?.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <div className="text-xs font-semibold text-amber-700 mb-1">Warnings</div>
+          <ul className="text-xs text-amber-700 list-disc list-inside space-y-0.5">
+            {result.warnings.map((w: string, i: number) => <li key={i}>{w}</li>)}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SearchIntentResult({ result }: { result: SearchIntentResultData }) {
+  const intentMeta: Record<string, { color: string; icon: React.ComponentType<{ className?: string }>; label: string }> = {
+    transactional: { color: 'bg-green-100 text-green-700 border-green-200', icon: ShoppingBag, label: 'Transactional' },
+    commercial: { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: BarChart3, label: 'Commercial' },
+    informational: { color: 'bg-purple-100 text-purple-700 border-purple-200', icon: Info, label: 'Informational' },
+    navigational: { color: 'bg-amber-100 text-amber-700 border-amber-200', icon: Compass, label: 'Navigational' },
+    local: { color: 'bg-pink-100 text-pink-700 border-pink-200', icon: MapPin, label: 'Local' },
+  };
+  const meta = intentMeta[result.intent] || intentMeta.informational;
+  const Icon = meta.icon;
+  return (
+    <div className="space-y-3">
+      <div className={`flex items-center gap-3 p-4 rounded-xl border ${meta.color}`}>
+        <Icon className="w-6 h-6 flex-shrink-0" />
+        <div className="flex-1">
+          <div className="text-xs font-semibold uppercase opacity-80">Detected Intent</div>
+          <div className="text-lg font-bold">{meta.label}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-bold">{result.confidence}%</div>
+          <div className="text-[10px] uppercase opacity-80">confidence</div>
+        </div>
+      </div>
+
+      {result.signals?.length > 0 && (
+        <ResultSection title="Signals" icon={Brain}>
+          <ul className="text-xs text-gray-700 space-y-1">
+            {result.signals.map((s: string, i: number) => (
+              <li key={i} className="flex items-start gap-1.5">
+                <ChevronRight className="w-3 h-3 text-purple-500 mt-0.5 flex-shrink-0" />
+                <span>{s}</span>
+              </li>
+            ))}
+          </ul>
+        </ResultSection>
+      )}
+
+      {result.suggestions?.length > 0 && (
+        <ResultSection title="Suggestions" icon={TrendingUp}>
+          <ul className="text-xs text-gray-700 space-y-1.5">
+            {result.suggestions.map((s: string, i: number) => (
+              <li key={i} className="flex items-start gap-1.5">
+                <Target className="w-3 h-3 text-purple-500 mt-0.5 flex-shrink-0" />
+                <span>{s}</span>
+              </li>
+            ))}
+          </ul>
+        </ResultSection>
+      )}
+    </div>
+  );
+}
+
+function KeywordDifficultyResult({ result }: { result: KeywordDifficultyResultData }) {
+  const levelColor: Record<string, string> = {
+    easy: 'bg-green-100 text-green-700 border-green-200',
+    medium: 'bg-amber-100 text-amber-700 border-amber-200',
+    hard: 'bg-orange-100 text-orange-700 border-orange-200',
+    'very hard': 'bg-red-100 text-red-700 border-red-200',
+  };
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-4 p-4 rounded-xl border bg-white border-gray-200">
+        <div className="relative w-20 h-20 flex-shrink-0">
+          <svg width="80" height="80" className="-rotate-90">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+            <circle
+              cx="40"
+              cy="40"
+              r="34"
+              fill="none"
+              stroke={result.difficulty < 30 ? '#16a34a' : result.difficulty < 55 ? '#f59e0b' : result.difficulty < 80 ? '#f97316' : '#ef4444'}
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 34}
+              strokeDashoffset={2 * Math.PI * 34 - (result.difficulty / 100) * 2 * Math.PI * 34}
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-gray-900">
+            {result.difficulty}
+          </div>
+        </div>
+        <div className="flex-1">
+          <div className="text-xs text-gray-500 uppercase font-semibold">Difficulty Score</div>
+          <span className={`inline-block mt-1 text-xs font-semibold uppercase px-2.5 py-1 rounded-full border ${levelColor[result.level] || ''}`}>
+            {result.level}
+          </span>
+        </div>
+      </div>
+
+      <ResultSection title="Factors" icon={BarChart3}>
+        <div className="space-y-2">
+          {result.factors?.map((f, i) => (
+            <div key={i} className="flex items-start gap-2 text-xs">
+              <span className={`px-1.5 py-0.5 rounded font-mono font-bold flex-shrink-0 ${
+                f.impact === 'positive' ? 'bg-green-50 text-green-700' :
+                f.impact === 'negative' ? 'bg-red-50 text-red-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                {f.delta > 0 ? '+' : ''}{f.delta}
+              </span>
+              <div className="flex-1">
+                <div className="font-medium text-gray-900">{f.name}</div>
+                <div className="text-gray-600">{f.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </ResultSection>
+    </div>
+  );
+}
+
+function InternalLinksResult({ result }: { result: InternalLinksResultData }) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 text-center">
+          <div className="text-lg font-bold text-gray-900">{result.internalLinksCount ?? 0}</div>
+          <div className="text-[10px] text-gray-600 uppercase font-medium">Internal</div>
+        </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 text-center">
+          <div className="text-lg font-bold text-gray-900">{result.externalLinksCount ?? 0}</div>
+          <div className="text-[10px] text-gray-600 uppercase font-medium">External</div>
+        </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 text-center">
+          <div className="text-lg font-bold text-gray-900">{result.totalLinks ?? 0}</div>
+          <div className="text-[10px] text-gray-600 uppercase font-medium">Total</div>
+        </div>
+      </div>
+
+      {result.suggestions?.length > 0 && (
+        <ResultSection title="Suggestions" icon={Info}>
+          <ul className="text-xs text-gray-700 space-y-1">
+            {result.suggestions.map((s: string, i: number) => (
+              <li key={i} className="flex items-start gap-1.5">
+                <ChevronRight className="w-3 h-3 text-purple-500 mt-0.5 flex-shrink-0" />
+                <span>{s}</span>
+              </li>
+            ))}
+          </ul>
+        </ResultSection>
+      )}
+
+      <ResultSection title="Internal links" icon={Link2}>
+        <div className="space-y-1.5 max-h-72 overflow-auto">
+          {result.internalLinks?.length === 0 && (
+            <p className="text-xs text-gray-500">No internal links found.</p>
+          )}
+          {result.internalLinks?.map((l, i) => (
+            <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-gray-50">
+              <div className="flex-1 min-w-0">
+                <a href={l.url} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-600 hover:underline break-all block">
+                  {l.url}
+                </a>
+                <div className="text-xs text-gray-700 mt-0.5 truncate">&ldquo;{l.anchorText}&rdquo;</div>
+              </div>
+              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                {l.nofollow && (
+                  <span className="text-[10px] font-semibold uppercase bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded">nofollow</span>
+                )}
+                {l.isBroken ? (
+                  <span className="text-[10px] font-semibold uppercase bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded">
+                    broken ({String(l.status)})
+                  </span>
+                ) : l.status === 'skipped' ? (
+                  <span className="text-[10px] font-semibold uppercase bg-gray-100 text-gray-600 border border-gray-200 px-1.5 py-0.5 rounded">skipped</span>
+                ) : (
+                  <span className="text-[10px] font-semibold uppercase bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded">{String(l.status)}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </ResultSection>
+    </div>
+  );
+}
+
+function DuplicateContentResult({ result }: { result: DuplicateContentResultData }) {
+  const levelColor: Record<string, string> = {
+    unique: 'bg-green-100 text-green-700 border-green-200',
+    low: 'bg-green-100 text-green-700 border-green-200',
+    moderate: 'bg-amber-100 text-amber-700 border-amber-200',
+    high: 'bg-orange-100 text-orange-700 border-orange-200',
+    duplicate: 'bg-red-100 text-red-700 border-red-200',
+  };
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-4 p-4 rounded-xl border bg-white border-gray-200">
+        <div className="relative w-20 h-20 flex-shrink-0">
+          <svg width="80" height="80" className="-rotate-90">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+            <circle
+              cx="40"
+              cy="40"
+              r="34"
+              fill="none"
+              stroke={result.similarity < 30 ? '#16a34a' : result.similarity < 60 ? '#f59e0b' : '#ef4444'}
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 34}
+              strokeDashoffset={2 * Math.PI * 34 - (result.similarity / 100) * 2 * Math.PI * 34}
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-gray-900">
+            {result.similarity}%
+          </div>
+        </div>
+        <div className="flex-1">
+          <div className="text-xs text-gray-500 uppercase font-semibold">Similarity</div>
+          <span className={`inline-block mt-1 text-xs font-semibold uppercase px-2.5 py-1 rounded-full border ${levelColor[result.level] || ''}`}>
+            {result.level}
+          </span>
+        </div>
+      </div>
+
+      {result.metrics && (
+        <ResultSection title="Metrics breakdown" icon={BarChart3}>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+              <div className="text-sm font-bold text-gray-900">{result.metrics.jaccard}%</div>
+              <div className="text-[10px] text-gray-600 uppercase">Jaccard</div>
+            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+              <div className="text-sm font-bold text-gray-900">{result.metrics.cosine}%</div>
+              <div className="text-[10px] text-gray-600 uppercase">Cosine</div>
+            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+              <div className="text-sm font-bold text-gray-900">{result.metrics.sentenceOverlap}%</div>
+              <div className="text-[10px] text-gray-600 uppercase">Sentence</div>
+            </div>
+          </div>
+        </ResultSection>
+      )}
+
+      {result.recommendation && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+          <span className="font-semibold">Recommendation:</span> {result.recommendation}
+        </div>
+      )}
+
+      {result.commonSentences?.length > 0 && (
+        <ResultSection title={`Common sentences (${result.commonSentences.length})`} icon={Copy}>
+          <ul className="text-xs text-gray-700 space-y-1.5 max-h-48 overflow-auto">
+            {result.commonSentences.map((s: string, i: number) => (
+              <li key={i} className="p-2 bg-gray-50 rounded">{s}</li>
+            ))}
+          </ul>
+        </ResultSection>
+      )}
+    </div>
+  );
+}
+
+function CoreWebVitalsResult({ result }: { result: CoreWebVitalsResultData }) {
+  const scoreColor = (score: number | null) => {
+    if (score === null) return 'bg-gray-100 text-gray-600 border-gray-200';
+    if (score >= 90) return 'bg-green-50 text-green-700 border-green-200';
+    if (score >= 50) return 'bg-amber-50 text-amber-700 border-amber-200';
+    return 'bg-red-50 text-red-700 border-red-200';
+  };
+  const metricColor = (status: string) => {
+    if (status === 'good') return 'bg-green-50 text-green-700 border-green-200';
+    if (status === 'needs-improvement') return 'bg-amber-50 text-amber-700 border-amber-200';
+    if (status === 'poor') return 'bg-red-50 text-red-700 border-red-200';
+    return 'bg-gray-50 text-gray-700 border-gray-200';
+  };
+
+  const metrics = result.metrics || {};
+  const metricList = [
+    { key: 'lcp', label: 'LCP', target: '< 2.5s' },
+    { key: 'inp', label: 'INP', target: '< 200ms' },
+    { key: 'cls', label: 'CLS', target: '< 0.1' },
+    { key: 'fcp', label: 'FCP', target: '< 1.8s' },
+    { key: 'tbt', label: 'TBT', target: '< 200ms' },
+    { key: 'speedIndex', label: 'Speed Index', target: '< 3.4s' },
+  ].filter((m) => metrics[m.key]);
+
+  const scoreList: Array<{ key: keyof CoreWebVitalsResultData['scores']; label: string }> = [
+    { key: 'performance', label: 'Performance' },
+    { key: 'seo', label: 'SEO' },
+    { key: 'accessibility', label: 'Accessibility' },
+    { key: 'bestPractices', label: 'Best Practices' },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <ResultSection title="Scores" icon={Gauge}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {scoreList.map((s) => {
+            const v = result.scores?.[s.key];
+            return (
+              <div key={s.key} className={`border rounded-lg p-2 text-center ${scoreColor(v)}`}>
+                <div className="text-xl font-bold">{v === null ? '—' : v}</div>
+                <div className="text-[10px] uppercase font-medium">{s.label}</div>
+              </div>
+            );
+          })}
+        </div>
+      </ResultSection>
+
+      {metricList.length > 0 && (
+        <ResultSection title="Core Web Vitals" icon={Gauge}>
+          <div className="space-y-1.5">
+            {metricList.map((m) => {
+              const metric = metrics[m.key];
+              if (!metric) return null;
+              return (
+                <div key={m.key} className={`flex items-center justify-between p-2 rounded-lg border ${metricColor(metric.status)}`}>
+                  <div>
+                    <div className="text-xs font-semibold uppercase">{m.label}</div>
+                    <div className="text-[10px] opacity-75">Target: {m.target}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold">{metric.displayValue}</div>
+                    <div className="text-[10px] uppercase">{metric.status}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </ResultSection>
+      )}
+
+      {result.recommendations?.length > 0 && (
+        <ResultSection title="Recommendations" icon={TrendingUp}>
+          <ul className="text-xs text-gray-700 space-y-1.5">
+            {result.recommendations.map((r: string, i: number) => (
+              <li key={i} className="flex items-start gap-1.5">
+                <ChevronRight className="w-3 h-3 text-purple-500 mt-0.5 flex-shrink-0" />
+                <span>{r}</span>
+              </li>
+            ))}
+          </ul>
+        </ResultSection>
+      )}
+
+      <div className="text-[11px] text-gray-500">
+        Measured on {result.fetchTime ? new Date(result.fetchTime).toLocaleString() : 'N/A'} · URL: {result.finalUrl}
       </div>
     </div>
   );
