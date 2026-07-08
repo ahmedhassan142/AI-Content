@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { generateLocalContent, generateLocalKeywords } from './localContentGenerator';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
@@ -126,8 +127,8 @@ Requirements:
       }
       return cleaned.trim();
     } catch (error) {
-      console.error('Content generation failed:', error);
-      return '';
+      console.error('Content generation failed (Groq), using local generator:', error);
+      return generateLocalContent({ prompt, tone, length, language, type });
     }
   }
 
@@ -161,8 +162,8 @@ Do not include any other text or explanation.`;
       const parsed = JSON.parse(cleanResult);
       return parsed.keywords || [];
     } catch (error) {
-      console.error('SEO keyword generation failed:', error);
-      return ['content marketing', 'digital strategy', 'audience engagement', 'brand development', 'online presence'];
+      console.error('SEO keyword generation failed (Groq):', error);
+      throw new Error('Groq SEO keywords failed');
     }
   }
 

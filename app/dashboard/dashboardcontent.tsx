@@ -8,7 +8,8 @@ import {
   Sparkles, FileText, PenTool, Save, Download,
   Search, ShieldCheck, SpellCheck, History, Star,
   Copy, Check, Loader2, Wand2, TrendingUp, AlertCircle,
-  Shield, Bot, Repeat, Hash, Eye, XCircle, CheckCircle2, ArrowRight
+  Shield, Bot, Repeat, Hash, Eye, XCircle, CheckCircle2, ArrowRight,
+  Globe, X, ExternalLink
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { GuestStorage } from '@/lib/GuestStorage';
@@ -31,6 +32,16 @@ interface PlagiarismReport {
   topKeywords: Array<{ word: string; count: number; frequency: number }>;
   originalityChecklist: ChecklistItem[]; humanQualityChecklist: ChecklistItem[]; seoChecklist: ChecklistItem[];
   stats: { wordCount: number; sentenceCount: number; paragraphCount: number; avgWordsPerSentence: number; uniqueWordRatio: number; longSentenceCount: number; };
+}
+
+interface WPSite {
+  _id: string;
+  siteName: string;
+  siteUrl: string;
+  wpUsername: string;
+  defaultStatus: 'draft' | 'publish';
+  isConnected: boolean;
+  lastPublishedAt: string | null;
 }
 
 const scoreColor = (score: number) => {
@@ -80,6 +91,15 @@ export default function DashboardContent() {
   const [enhancedReport, setEnhancedReport] = useState<PlagiarismReport | null>(null);
   const [enhanceMode, setEnhanceMode] = useState<'plagiarism' | 'humanize'>('plagiarism');
   const [genError, setGenError] = useState<string | null>(null);
+
+  // WordPress publish modal state
+  const [showWpModal, setShowWpModal] = useState(false);
+  const [wpSites, setWpSites] = useState<WPSite[]>([]);
+  const [wpSitesLoading, setWpSitesLoading] = useState(false);
+  const [wpSelectedSiteId, setWpSelectedSiteId] = useState<string>('');
+  const [wpPublishStatus, setWpPublishStatus] = useState<'draft' | 'publish'>('draft');
+  const [wpPublishing, setWpPublishing] = useState(false);
+  const [wpResult, setWpResult] = useState<{ success: boolean; message: string; postUrl?: string | null } | null>(null);
 
   useEffect(() => {
     checkSession();
@@ -390,6 +410,63 @@ export default function DashboardContent() {
     setEnhanceChanges([]);
     setEnhancedReport(null);
     alert(enhanceMode === 'humanize' ? 'Content humanized successfully!' : 'Content fixed successfully!');
+  };
+
+  const openWpModal = async () => {
+    if (!content) return;
+    setShowWpModal(true);
+    setWpResult(null);
+    setWpSelectedSiteId('');
+    setWpPublishStatus('draft');
+    setWpSitesLoading(true);
+    try {
+      const res = await fetch('/api/wordpress', { headers: { ...getAuthHeader() } });
+      const data = await res.json();
+      if (data.success) {
+        setWpSites(data.sites || []);
+        if ((data.sites || []).length > 0) {
+          setWpSelectedSiteId(data.sites[0]._id);
+          setWpPublishStatus(data.sites[0].defaultStatus || 'draft');
+        }
+      } else {
+        setWpSites([]);
+      }
+    } catch (err) {
+      setWpSites([]);
+    } finally {
+      setWpSitesLoading(false);
+    }
+  };
+
+  const handleWpPublish = async () => {
+    if (!wpSelectedSiteId || !content || !title) return;
+    setWpPublishing(true);
+    setWpResult(null);
+    try {
+      const res = await fetch(`/api/wordpress/${wpSelectedSiteId}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({
+          title,
+          content,
+          status: wpPublishStatus,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWpResult({
+          success: true,
+          message: `Published as ${wpPublishStatus}! Post ID: ${data.postId}`,
+          postUrl: data.postUrl,
+        });
+      } else {
+        setWpResult({ success: false, message: data.error || 'Failed to publish' });
+      }
+    } catch (err) {
+      setWpResult({ success: false, message: 'Failed to publish to WordPress' });
+    } finally {
+      setWpPublishing(false);
+    }
   };
 
   if (loading) {
@@ -706,6 +783,14 @@ export default function DashboardContent() {
                     <Download className="w-5 h-5 text-gray-700" />
                   </button>
                   <button
+                    onClick={openWpModal}
+                    disabled={!content}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition"
+                    title="Publish to WordPress"
+                  >
+                    <Globe className="w-5 h-5 text-gray-700" />
+                  </button>
+                  <button
                     onClick={saveContent}
                     disabled={!content || saving}
                     className="p-2 hover:bg-gray-100 rounded-lg transition"
@@ -957,6 +1042,151 @@ export default function DashboardContent() {
                   Apply Changes
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* WordPress Publish Modal */}
+      <AnimatePresence>
+        {showWpModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-purple-600" />
+                  Publish to WordPress
+                </h3>
+                <button
+                  onClick={() => setShowWpModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <X className="w-5 h-5 text-gray-700" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4 overflow-auto">
+                {wpSitesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+                    <span className="ml-2 text-gray-800 text-sm">Loading sites...</span>
+                  </div>
+                ) : wpSites.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Globe className="w-10 h-10 mx-auto mb-2 text-gray-400" />
+                    <p className="text-gray-900 font-medium mb-1">No WordPress sites connected</p>
+                    <p className="text-sm text-gray-700 mb-4">
+                      Add a site first to publish content directly.
+                    </p>
+                    <Link
+                      href="/wordpress"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition"
+                    >
+                      <Globe className="w-4 h-4" />
+                      Go to WordPress Settings
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Select Site</label>
+                      <select
+                        value={wpSelectedSiteId}
+                        onChange={(e) => {
+                          setWpSelectedSiteId(e.target.value);
+                          const s = wpSites.find((x) => x._id === e.target.value);
+                          if (s) setWpPublishStatus(s.defaultStatus || 'draft');
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                      >
+                        {wpSites.map((s) => (
+                          <option key={s._id} value={s._id}>
+                            {s.siteName} — {s.siteUrl}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Status</label>
+                      <select
+                        value={wpPublishStatus}
+                        onChange={(e) => setWpPublishStatus(e.target.value as 'draft' | 'publish')}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="publish">Publish immediately</option>
+                      </select>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-800">
+                      <p className="font-medium text-gray-900">Title:</p>
+                      <p className="mt-0.5 truncate">{title || '(no title)'}</p>
+                      <p className="font-medium text-gray-900 mt-2">Content length:</p>
+                      <p className="mt-0.5">{content.split(' ').length} words</p>
+                    </div>
+
+                    {wpResult && (
+                      <div
+                        className={`p-3 rounded-lg text-sm flex items-start gap-2 ${
+                          wpResult.success
+                            ? 'bg-green-50 border border-green-200 text-green-800'
+                            : 'bg-red-50 border border-red-200 text-red-800'
+                        }`}
+                      >
+                        {wpResult.success ? (
+                          <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-medium">{wpResult.message}</p>
+                          {wpResult.success && wpResult.postUrl && (
+                            <a
+                              href={wpResult.postUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-purple-600 hover:underline mt-1 text-xs"
+                            >
+                              View post <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {wpSites.length > 0 && (
+                <div className="p-6 border-t border-gray-200 flex gap-3">
+                  <button
+                    onClick={() => setShowWpModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-800 hover:bg-gray-50 transition"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={handleWpPublish}
+                    disabled={wpPublishing || !wpSelectedSiteId}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {wpPublishing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Publishing...
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="w-4 h-4" />
+                        Publish to WordPress
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         )}

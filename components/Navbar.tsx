@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Menu, X, LayoutDashboard, History, Star, LogOut,
-  User, ChevronDown, FileText, Crown, Eye, Heart, Search, Webhook
+  User, ChevronDown, FileText, Crown, Eye, Heart, Search, Webhook, Globe
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -67,6 +67,7 @@ export default function Navbar() {
   const dashboardNavItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/seo', label: 'SEO Tools', icon: Search },
+    { path: '/wordpress', label: 'WordPress', icon: Globe },
     { path: '/webhooks', label: 'Webhooks', icon: Webhook },
     { path: '/history', label: 'History', icon: History },
     { path: '/favorites', label: 'Favorites', icon: Heart },
@@ -441,6 +442,15 @@ export default function Navbar() {
                     >
                       <Search className="w-5 h-5" />
                       <span>SEO Tools</span>
+                    </Link>
+
+                    <Link
+                      href="/wordpress"
+                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Globe className="w-5 h-5" />
+                      <span>WordPress</span>
                     </Link>
 
                     <Link
