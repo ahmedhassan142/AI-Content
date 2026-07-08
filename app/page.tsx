@@ -13,12 +13,12 @@ export default function LandingPage() {
   const [isPlaying, setIsPlaying] = useState(false);
 
   const features = [
-    { icon: Sparkles, title: 'AI-Powered Generation', desc: 'Create high-quality content in seconds with advanced AI models tuned for clarity and engagement.', color: 'from-purple-500 to-pink-500' },
-    { icon: PenTool, title: 'Multiple Tones', desc: 'Professional, casual, friendly, persuasive — match the perfect tone for every audience.', color: 'from-blue-500 to-cyan-500' },
-    { icon: Globe, title: 'Multi-Language', desc: 'Generate content in 50+ languages for global reach and localization.', color: 'from-green-500 to-emerald-500' },
-    { icon: Search, title: 'SEO Optimization', desc: 'Get keyword suggestions and on-page SEO insights to rank higher on search engines.', color: 'from-orange-500 to-red-500' },
-    { icon: ShieldCheck, title: 'Plagiarism Check', desc: 'Ensure your content is original and unique with built-in plagiarism detection.', color: 'from-indigo-500 to-purple-500' },
-    { icon: SpellCheck, title: 'Grammar Correction', desc: 'Fix grammar issues, improve readability, and polish every sentence automatically.', color: 'from-yellow-500 to-amber-500' },
+    { icon: Sparkles, title: 'AI-Powered Generation', desc: 'Create high-quality content in seconds.', color: 'from-purple-500 to-pink-500' },
+    { icon: PenTool, title: 'Multiple Tones', desc: 'Match the perfect tone for any audience.', color: 'from-blue-500 to-cyan-500' },
+    { icon: Globe, title: 'Multi-Language', desc: 'Generate content in 50+ languages.', color: 'from-green-500 to-emerald-500' },
+    { icon: Search, title: 'SEO Optimization', desc: 'Get keyword suggestions and SEO insights.', color: 'from-orange-500 to-red-500' },
+    { icon: ShieldCheck, title: 'Plagiarism Check', desc: 'Ensure content is original and unique.', color: 'from-indigo-500 to-purple-500' },
+    { icon: SpellCheck, title: 'Grammar Correction', desc: 'Fix grammar and polish every sentence.', color: 'from-yellow-500 to-amber-500' },
   ];
 
   const stats = [
@@ -85,8 +85,7 @@ export default function LandingPage() {
                 <span className="block text-gray-900">with AI.</span>
               </h1>
               <p className="text-lg lg:text-xl text-gray-700 mb-8 leading-relaxed max-w-xl">
-                Generate high-quality blog posts, social media content, emails, and more in seconds.
-                Trusted by 50,000+ creators, marketers, and founders worldwide.
+                Generate high-quality blog posts, social content, and emails in seconds.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <Link
@@ -286,7 +285,7 @@ export default function LandingPage() {
               </span>
             </h2>
             <p className="text-lg text-gray-700">
-              One platform for writing, SEO, plagiarism checks, and grammar — all powered by advanced AI.
+              One platform for writing, SEO, plagiarism, and grammar.
             </p>
           </motion.div>
 
@@ -332,9 +331,9 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { step: '01', title: 'Enter Your Topic', desc: 'Type your topic or keywords, then choose tone and length.', icon: PenTool },
-              { step: '02', title: 'AI Generates Content', desc: 'Our AI creates unique, high-quality content in seconds.', icon: Cpu },
-              { step: '03', title: 'Edit & Publish', desc: 'Review, edit, and export your content anywhere.', icon: Cloud },
+              { step: '01', title: 'Enter Your Topic', desc: 'Type your topic, then choose tone and length.', icon: PenTool },
+              { step: '02', title: 'AI Generates Content', desc: 'Unique, high-quality content in seconds.', icon: Cpu },
+              { step: '03', title: 'Edit & Publish', desc: 'Review, edit, and export anywhere.', icon: Cloud },
             ].map((item, index) => {
               const Icon = item.icon;
               return (
@@ -382,7 +381,7 @@ export default function LandingPage() {
             <h2 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
               Free <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Forever</span>
             </h2>
-            <p className="text-lg text-gray-700">Every feature. Every user. No subscription, no credit card.</p>
+            <p className="text-lg text-gray-700">Every feature. Every user. No credit card.</p>
           </motion.div>
 
           <motion.div
@@ -404,7 +403,7 @@ export default function LandingPage() {
               </div>
 
               <p className="text-gray-700 mb-6 text-center">
-                Everything unlocked from day one. No trials, no limits.
+                Everything unlocked from day one.
               </p>
 
               <div className="mb-8 text-center">
@@ -453,9 +452,9 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { name: 'Sarah Johnson', role: 'Content Marketer', content: 'This AI tool has transformed my content workflow. I can now produce 10x more content in half the time!', rating: 5 },
-              { name: 'Michael Chen', role: 'SEO Specialist', content: 'The SEO keyword suggestions are spot-on. My articles are ranking higher than ever before.', rating: 5 },
-              { name: 'Emily Rodriguez', role: 'Blogger', content: 'Best investment for my blog. The content quality is amazing and it saves me hours of writing.', rating: 5 },
+              { name: 'Sarah Johnson', role: 'Content Marketer', content: 'This tool transformed my workflow — 10x more content in half the time!', rating: 5 },
+              { name: 'Michael Chen', role: 'SEO Specialist', content: 'The SEO keyword suggestions are spot-on. My articles rank higher than ever.', rating: 5 },
+              { name: 'Emily Rodriguez', role: 'Blogger', content: 'Amazing content quality that saves me hours of writing.', rating: 5 },
             ].map((testimonial, index) => (
               <motion.div
                 key={index}
@@ -494,7 +493,7 @@ export default function LandingPage() {
               Ready to Create Amazing Content?
             </h2>
             <p className="text-xl text-purple-100 mb-8">
-              Free forever. Unlimited usage. No subscription.
+              Free forever. Unlimited usage.
             </p>
             <Link
               href="/signup"

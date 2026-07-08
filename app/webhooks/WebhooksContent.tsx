@@ -791,7 +791,7 @@ export default function WebhooksContent() {
                       Webhook “{createdSecret.name}” created — copy your signing secret now.
                     </p>
                     <p className="text-xs text-green-700 mt-0.5">
-                      For security, the secret is only shown this once. Store it safely.
+                      The secret is only shown once — store it safely.
                     </p>
 
                     <div className="mt-3 flex flex-col sm:flex-row gap-2">
@@ -850,7 +850,7 @@ export default function WebhooksContent() {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-1">No webhooks yet</h3>
             <p className="text-gray-700 mb-4 text-sm max-w-md mx-auto">
-              Create your first webhook to automatically push generated content, SEO audits, and fixes to your own site.
+              Create your first webhook to push content, SEO audits, and fixes to your site.
             </p>
             <button
               onClick={() => setShowCreate(true)}
@@ -1058,7 +1058,7 @@ export default function WebhooksContent() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono"
                 />
                 <p className="text-xs text-gray-700 mt-1">
-                  The HTTPS endpoint that will receive POST requests.
+                  The HTTPS endpoint that receives POST requests.
                 </p>
               </div>
 
@@ -1074,7 +1074,7 @@ export default function WebhooksContent() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono"
                 />
                 <p className="text-xs text-gray-700 mt-1">
-                  Used to verify the <code>X-AIContent-Signature</code> header. Min 16 chars.
+                  Verifies the <code>X-AIContent-Signature</code> header. Min 16 chars.
                 </p>
               </div>
 
@@ -1150,8 +1150,7 @@ export default function WebhooksContent() {
           <Modal onClose={() => setShowReceiver(false)} title="Receiver Code" wide>
             <div className="space-y-4">
               <p className="text-sm text-gray-700">
-                Drop these snippets on your own server. Each one verifies the HMAC-SHA256
-                signature and saves the incoming event into your database.
+                Drop these snippets on your server. Each verifies the HMAC-SHA256 signature and saves the event to your database.
               </p>
 
               {/* Tabs */}

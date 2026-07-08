@@ -264,15 +264,9 @@ export default function WordPressContent() {
           {showInstructions && (
             <div className="px-4 pb-4">
               <ol className="list-decimal list-inside space-y-1.5 text-sm text-gray-800">
-                <li>
-                  Go to your WordPress admin (
-                  <code className="bg-gray-100 px-1 rounded text-gray-900">yourwebsite.com/wp-admin</code>)
-                </li>
-                <li>Go to <strong>Users → Profile</strong></li>
-                <li>Scroll to the <strong>Application Passwords</strong> section</li>
-                <li>Enter <code className="bg-gray-100 px-1 rounded text-gray-900">AI Content Writer</code> as the name</li>
-                <li>Click <strong>Add New Application Password</strong></li>
-                <li>Copy the password shown (you won&apos;t see it again)</li>
+                <li>Go to WordPress admin → <strong>Users → Profile</strong></li>
+                <li>Scroll to <strong>Application Passwords</strong>, enter <code className="bg-gray-100 px-1 rounded text-gray-900">AI Content Writer</code></li>
+                <li>Click <strong>Add New</strong> and copy the password shown</li>
               </ol>
             </div>
           )}

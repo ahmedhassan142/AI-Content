@@ -166,9 +166,7 @@ function fixTitle($: cheerio.CheerioAPI, url: string): SeoFix {
       },
     ],
     instructions: [
-      'Place the <title> tag inside <head>.',
-      'Each page should have a unique title.',
-      'Keep between 50–60 characters to avoid truncation in SERPs.',
+      'Place inside <head>, keep 50-60 chars.',
     ],
   };
 }
@@ -197,9 +195,7 @@ function fixMetaDescription($: cheerio.CheerioAPI): SeoFix {
       },
     ],
     instructions: [
-      'Place the <meta name="description"> tag inside <head>.',
-      'Keep between 120–160 characters.',
-      'Write a unique, compelling summary that includes target keywords.',
+      'Place inside <head>, keep 120-160 chars with target keywords.',
     ],
   };
 }
@@ -254,7 +250,7 @@ function fixHeadings($: cheerio.CheerioAPI): SeoFix {
     };
   }
 
-  instructions.push('Maintain a logical heading hierarchy: <h1> → <h2> → <h3>. Never skip levels.');
+  instructions.push('Maintain a logical hierarchy: <h1> → <h2> → <h3>, never skip levels.');
 
   return {
     checkId: 'headings',
@@ -295,8 +291,7 @@ function fixViewport($: cheerio.CheerioAPI): SeoFix {
       },
     ],
     instructions: [
-      'Never disable user scaling (avoid user-scalable=no).',
-      'Test on a real mobile device or with Chrome DevTools device emulation.',
+      'Never disable user scaling.',
     ],
   };
 }
@@ -331,9 +326,7 @@ function fixCanonical(url: string, $: cheerio.CheerioAPI): SeoFix {
       },
     ],
     instructions: [
-      'Use one canonical tag per page.',
-      'Point to the absolute, preferred URL (HTTPS, lowercase, no query string if possible).',
-      'Self-canonical is fine on canonical pages.',
+      'Use one canonical tag per page pointing to the absolute preferred URL.',
     ],
   };
 }
@@ -396,9 +389,8 @@ function fixOpenGraph(url: string, $: cheerio.CheerioAPI): SeoFix {
       },
     ],
     instructions: [
-      'Use an OG image of 1200×630 px, under 1 MB.',
-      'Keep og:title under 60 and og:description under 160 characters.',
-      'Test with https://developers.facebook.com/tools/debug/ and https://cards-dev.twitter.com/validator.',
+      'Use a 1200×630 px OG image under 1 MB.',
+      'Keep og:title < 60 and og:description < 160 chars.',
     ],
   };
 }
@@ -455,9 +447,7 @@ function fixImageAlt($: cheerio.CheerioAPI): SeoFix {
       },
     ],
     instructions: [
-      'Review the suggested alt text and rewrite to be descriptive where needed.',
-      'Use empty alt="" only for purely decorative images.',
-      'Avoid keyword stuffing — describe the image naturally.',
+      'Rewrite suggested alt text to be descriptive; use alt="" only for decorative images.',
     ],
   };
 }
@@ -488,9 +478,7 @@ Sitemap: ${sitemapUrl}`;
       },
     ],
     instructions: [
-      'Upload robots.txt to the site root (https://example.com/robots.txt).',
-      'Only block paths that should not be indexed (admin, internal search, etc.).',
-      'Always reference your sitemap URL with a "Sitemap:" line.',
+      'Upload robots.txt to the site root and reference your sitemap URL.',
     ],
   };
 }
@@ -557,10 +545,8 @@ ${
       },
     ],
     instructions: [
-      'Upload sitemap.xml to the site root.',
-      'Reference it from robots.txt with "Sitemap: ' + (origin || 'https://example.com') + '/sitemap.xml".',
-      'Submit it in Google Search Console and Bing Webmaster Tools.',
-      'Regenerate the sitemap whenever you publish or remove content.',
+      'Upload sitemap.xml to the site root and submit it in Google Search Console.',
+      'Regenerate whenever you publish or remove content.',
     ],
   };
 }
@@ -635,10 +621,8 @@ server {
       },
     ],
     instructions: [
-      'Use lowercase, hyphen-separated slugs only.',
-      'Avoid query parameters for indexable pages — use clean paths instead.',
-      'Keep URL paths shallow (≤ 3–4 segments).',
-      'Set up 301 redirects from any old URLs to the new clean URL.',
+      'Use lowercase, hyphen-separated slugs and shallow paths.',
+      'Set up 301 redirects from old URLs.',
     ],
   };
 }
@@ -662,9 +646,7 @@ function fixRobotsMeta($: cheerio.CheerioAPI): SeoFix {
         },
       ],
       instructions: [
-        'Use "index, follow" for pages you want crawled and indexed.',
-        'Reserve "noindex, follow" for thank-you pages, internal search results, etc.',
-        'Check X-Robots-Tag headers in your server config as well.',
+        'Use "index, follow" for pages you want indexed.',
       ],
     };
   }
@@ -686,7 +668,6 @@ function fixRobotsMeta($: cheerio.CheerioAPI): SeoFix {
     ],
     instructions: [
       'Add this tag if no robots meta is present.',
-      'Use "noindex, follow" for pages that should not be indexed but should still be crawled.',
     ],
   };
 }
@@ -825,9 +806,7 @@ export function generateSeoFixes(opts: FixerOptions): FixResult {
             'Broken Links',
             'Broken links cannot be auto-fixed — you need to update or remove each link manually.',
             [
-              'For each broken link, either: fix the URL, replace it with a working one, or remove the link.',
-              'If a page moved, add a 301 redirect from the old URL to the new one.',
-              'Re-run the audit after fixing to confirm.',
+              'Fix or remove each broken link; add 301 redirects for moved pages.',
             ]
           )
         );
@@ -839,11 +818,8 @@ export function generateSeoFixes(opts: FixerOptions): FixResult {
             'Page Speed',
             'Page speed requires runtime/build optimisations that cannot be patched in static HTML.',
             [
-              'Compress and convert images to WebP/AVIF.',
-              'Defer or async non-critical JavaScript.',
-              'Enable HTTP/2, Brotli/Gzip compression, and browser caching on the server.',
-              'Reduce third-party scripts and use a CDN.',
-              'Target LCP < 2.5s, CLS < 0.1, INP < 200ms.',
+              'Compress images, defer JS, enable caching.',
+              'Target LCP < 2.5s, CLS < 0.1.',
             ]
           )
         );
@@ -855,10 +831,8 @@ export function generateSeoFixes(opts: FixerOptions): FixResult {
             'Content Quality',
             'Content quality needs human editing — auto-generation would hurt your brand.',
             [
-              'Expand thin pages to 600+ words with original research, examples, and FAQs.',
-              'Break long sentences into shorter ones (target ≤ 20 words/sentence).',
-              'Use the AI Content Writer to draft longer, well-structured content.',
-              'Ensure content directly answers the user intent behind the target query.',
+              'Expand thin pages to 600+ words with original research and examples.',
+              'Use the AI Content Writer to draft longer content.',
             ]
           )
         );
@@ -896,7 +870,7 @@ export function generateSeoFixes(opts: FixerOptions): FixResult {
         }],
         instructions: sc.hasSchema
           ? sc.schemas.filter((s: any) => s.errors?.length > 0).map((s: any) => `Fix ${s.type}: ${s.errors.join(', ')}`)
-          : ['Add JSON-LD structured data to your <head>', 'Include @context: "https://schema.org"', 'Validate at https://search.google.com/test/rich-results'],
+          : ['Add JSON-LD structured data to your <head>.', 'Validate at https://search.google.com/test/rich-results.'],
       });
     } else {
       fixes.push({ checkId: 'schema_markup', checkName: 'Schema Markup', status: 'already_ok', fixDescription: 'Schema markup is valid.', codeSnippets: [], instructions: [] });
@@ -915,9 +889,7 @@ export function generateSeoFixes(opts: FixerOptions): FixResult {
         fixDescription: `${noAnchorCount} internal links have no anchor text. ${il.suggestions?.length || 0} suggestions found.`,
         codeSnippets: [],
         instructions: [
-          `Add descriptive anchor text to ${noAnchorCount} link(s) with no text.`,
-          'Use keyword-rich anchor text (e.g., "buy winter jackets" not "click here").',
-          'Remove nofollow from important internal links to pass link equity.',
+          `Add keyword-rich anchor text to ${noAnchorCount} link(s) without text.`,
           ...(il.suggestions || []),
         ],
       });
@@ -937,10 +909,7 @@ export function generateSeoFixes(opts: FixerOptions): FixResult {
         fixDescription: `Content is too thin (${tc.wordCount} words, level: ${tc.level}). Needs expansion.`,
         codeSnippets: [],
         instructions: [
-          `Expand content from ${tc.wordCount} to at least 600 words.`,
-          'Add specific examples, data points, and case studies.',
-          'Break content into more paragraphs (currently ' + tc.paragraphCount + ').',
-          'Add H2/H3 subheadings for structure (currently ' + tc.h2Count + ' H2s).',
+          `Expand from ${tc.wordCount} to 600+ words with examples and H2/H3 subheadings.`,
           'Use the AI Content Writer to generate expanded content.',
         ],
       });
@@ -960,10 +929,8 @@ export function generateSeoFixes(opts: FixerOptions): FixResult {
         fixDescription: `${op.orphanCount} orphan page(s) found — pages with 0-1 internal links pointing to them.`,
         codeSnippets: [],
         instructions: [
-          `Add internal links from other pages to these orphan pages:`,
-          ...(op.orphanCandidates?.slice(0, 5).map((p: any) => `Link to ${p.path} from relevant pages`) || []),
-          'Add the orphan pages to your main navigation menu.',
-          'Add contextual links from blog posts or related pages.',
+          `Add internal links from relevant pages to these orphan pages:`,
+          ...(op.orphanCandidates?.slice(0, 5).map((p: any) => `Link to ${p.path}`) || []),
         ],
       });
     } else {
@@ -982,10 +949,8 @@ export function generateSeoFixes(opts: FixerOptions): FixResult {
         fixDescription: `Redirect chain detected (${rc.totalRedirects} redirects). ${rc.hasLoop ? 'Loop detected!' : ''}`,
         codeSnippets: [],
         instructions: [
-          `Update the redirect to point directly to the final URL: ${rc.finalUrl}`,
-          'Avoid redirect chains longer than 1 hop.',
-          'Use 301 (permanent) redirects instead of 302 (temporary).',
-          'Check your .htaccess or server config for redirect rules.',
+          `Redirect directly to ${rc.finalUrl} with a single 301 hop.`,
+          'Update .htaccess or server config.',
         ],
       });
     } else {

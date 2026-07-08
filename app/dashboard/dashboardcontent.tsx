@@ -1358,8 +1358,7 @@ export default function DashboardContent() {
                   <div className="space-y-3">
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-sm text-blue-800">
-                        This will save your content and send it to all connected webhook sites.
-                        The target website's webhook receiver will store it in their database.
+                        This will save your content and send it to all connected webhook receivers.
                       </p>
                     </div>
                     <Link

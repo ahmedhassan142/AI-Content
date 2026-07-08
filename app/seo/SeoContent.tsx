@@ -922,7 +922,7 @@ function SeoAuditPanel() {
 
           {fastMode && (
             <p className="mt-3 text-xs text-amber-600 flex items-center gap-1">
-              <Info className="w-3.5 h-3.5" /> Fast mode skips PageSpeed Insights, broken-link checks, and sitemap discovery.
+              <Info className="w-3.5 h-3.5" /> Fast mode skips PSI, broken-link checks, and sitemap discovery.
             </p>
           )}
         </div>
@@ -1086,7 +1086,7 @@ function SeoAuditPanel() {
                   <div>
                     <div className="font-bold">Get ready-to-paste fixes</div>
                     <div className="text-sm text-purple-100">
-                      Generate code snippets for every failed check.
+                      Generate code snippets for failed checks.
                     </div>
                   </div>
                 </div>
@@ -1320,15 +1320,14 @@ function SeoAuditPanel() {
                           ))}
                         </select>
                         <p className="text-xs text-gray-600 mt-2">
-                          The SEO fix report will be published as a draft post on your WordPress site.
+                          The fix report will be published as a draft post.
                         </p>
                       </div>
                     )
                   ) : (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-sm text-blue-800">
-                        The SEO fix report will be sent to all connected webhook sites.
-                        The target website&apos;s webhook receiver will store it in their database.
+                        The SEO fix report will be sent to all connected webhook receivers.
                       </p>
                       <a href="/webhooks" className="inline-flex items-center gap-1 text-sm text-purple-600 hover:underline mt-2">
                         <Sparkles className="w-4 h-4" />
@@ -1698,7 +1697,7 @@ function ToolResultDisplay({ toolId, data }: { toolId: string; data: any }) {
         <h3 className="font-semibold text-gray-900 text-sm">Redirect Chain</h3>
         <p className="text-sm text-gray-700">Total redirects: {data.totalRedirects} | Final URL: {data.finalUrl}</p>
         {data.hasLoop && <p className="text-sm text-red-600">⚠ Redirect loop detected!</p>}
-        {data.isChain && <p className="text-sm text-yellow-600">⚠ Redirect chain found — consider redirecting directly to the final URL.</p>}
+        {data.isChain && <p className="text-sm text-yellow-600">⚠ Redirect chain found — redirect directly to the final URL.</p>}
         {data.chain?.map((hop: any, i: number) => (
           <div key={i} className="bg-white border border-gray-200 rounded-lg p-2 text-xs">
             <span className="font-mono text-gray-700">{hop.status}</span> → {hop.url}
