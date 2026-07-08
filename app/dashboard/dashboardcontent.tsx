@@ -205,10 +205,31 @@ export default function DashboardContent() {
         setSeoKeywords(data.seoKeywords || []);
         setPlagiarismScore(data.plagiarismScore ?? null);
         setGrammarIssues(data.grammarIssues || []);
-        // Extract title from the generated content's first H1, not from the raw prompt
-        const contentTitle = data.content
-          ? (data.content.match(/^#\s+(.+)$/m)?.[1] || data.content.split('\n')[0].replace(/[#*]/g, '').trim() || prompt.slice(0, 50))
-          : prompt.slice(0, 50);
+        // Extract a SHORT, clean title from the generated content's first H1
+        // Maximum 60 chars, prefer 30-50 for best readability and SEO
+        let contentTitle = prompt.slice(0, 50);
+        if (data.content) {
+          const h1Match = data.content.match(/^#\s+(.+)$/m);
+          let rawTitle = h1Match ? h1Match[1] : data.content.split('\n')[0].replace(/[#*]/g, '').trim();
+
+          // Clean up: remove subtitles after colons if too long, remove "The Complete Guide to" etc.
+          // If title has a colon and is > 60 chars, take the part after the colon
+          if (rawTitle.length > 60 && rawTitle.includes(':')) {
+            const afterColon = rawTitle.split(':').slice(1).join(':').trim();
+            if (afterColon.length >= 15 && afterColon.length <= 60) {
+              rawTitle = afterColon;
+            }
+          }
+
+          // If still too long, truncate at word boundary
+          if (rawTitle.length > 60) {
+            rawTitle = rawTitle.slice(0, 57).replace(/\s+\S*$/, '') + '...';
+          }
+
+          // Capitalize first letter
+          rawTitle = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
+          contentTitle = rawTitle;
+        }
         setTitle(contentTitle);
         if (data.plagiarismReport) {
           setPlagiarismReport(data.plagiarismReport);
