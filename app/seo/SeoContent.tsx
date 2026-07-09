@@ -1165,9 +1165,19 @@ function SeoAuditPanel() {
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Generated files */}
+                      {/* What's automated vs manual */}
+                      <div className="mt-3 grid md:grid-cols-2 gap-3">
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                          <p className="text-xs font-bold text-green-800 mb-1">✅ Automated (code generated)</p>
+                          <p className="text-[11px] text-green-700">Title tag, meta description, canonical, Open Graph, viewport, robots.txt, sitemap.xml, schema markup — copy the code and paste into your site, or apply via WordPress/webhook.</p>
+                        </div>
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                          <p className="text-xs font-bold text-amber-800 mb-1">⚠ Manual action needed</p>
+                          <p className="text-[11px] text-amber-700">Page speed, thin content, broken links, internal links, orphan pages — these require editing your website files or server config. No tool can fix these from a URL alone.</p>
+                        </div>
+                      </div>
+                    </div>
                     {(fixResult.generatedFiles.robotsTxt ||
                       fixResult.generatedFiles.sitemapXml) && (
                       <div className="grid md:grid-cols-2 gap-4">
