@@ -152,11 +152,52 @@ export async function POST(request: NextRequest) {
     }
 
     if (!foundPost) {
-      return NextResponse.json({
-        success: false,
-        error: `No WordPress post or page found matching the URL "${auditedUrl}". The fixes could not be applied automatically. You need to manually add the fixed title and meta description to the page.`,
-        suggestion: 'Create a new page in WordPress with the audited URL slug, then try again.',
-      });
+      // Can't find the page — create a NEW draft post with the fixed title and meta
+      try {
+        const createRes = await fetch(
+          `${baseUrl}/wp-json/wp/v2/posts`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: authHeader,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify({
+              title: fixedTitle?.trim() || `SEO Fixes for ${auditedUrl}`,
+              content: `<p>SEO fix report for <a href="${auditedUrl}">${auditedUrl}</a></p>\n\n<h2>Fixed Title</h2>\n<p>${fixedTitle || '(not generated)'}</p>\n\n<h2>Fixed Meta Description</h2>\n<p>${fixedMetaDescription || '(not generated)'}</p>`,
+              status: 'draft',
+              excerpt: fixedMetaDescription?.trim() || `SEO fixes for ${auditedUrl}`,
+            }),
+            signal: AbortSignal.timeout(15000),
+          }
+        );
+
+        if (createRes.ok) {
+          const newPost = await createRes.json();
+          return NextResponse.json({
+            success: true,
+            postId: newPost.id,
+            postUrl: newPost.link || `${baseUrl}/?p=${newPost.id}`,
+            changes: [
+              `Created new draft post with fixed title: "${fixedTitle}"`,
+              `Set excerpt (meta description): "${fixedMetaDescription?.substring(0, 80)}..."`,
+            ],
+            message: `Created a new draft post on WordPress with the fixed title and meta description. The original page at ${auditedUrl} was not found as a WordPress post/page.`,
+          });
+        } else {
+          const errData = await createRes.json().catch(() => ({}));
+          return NextResponse.json({
+            success: false,
+            error: `Could not find or create a post for ${auditedUrl}. WordPress error: ${errData.message || createRes.status}`,
+          }, { status: 404 });
+        }
+      } catch (createErr: any) {
+        return NextResponse.json({
+          success: false,
+          error: `Failed to create post: ${createErr.message}`,
+        }, { status: 500 });
+      }
     }
 
     postId = foundPost.id;
