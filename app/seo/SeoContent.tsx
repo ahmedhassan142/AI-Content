@@ -376,7 +376,7 @@ function FixCard({ fix }: { fix: SeoFix }) {
   const [open, setOpen] = useState(true);
   const statusInfo =
     fix.status === 'fixed'
-      ? { icon: <Wrench className="w-4 h-4 text-green-600" />, label: 'Fix ready', tone: 'text-green-700 bg-green-50 border-green-200' }
+      ? { icon: <Wrench className="w-4 h-4 text-amber-600" />, label: 'Manual action', tone: 'text-amber-700 bg-amber-50 border-amber-200' }
       : fix.status === 'cannot_fix'
       ? { icon: <AlertTriangle className="w-4 h-4 text-amber-600" />, label: 'Manual action', tone: 'text-amber-700 bg-amber-50 border-amber-200' }
       : { icon: <CheckCircle2 className="w-4 h-4 text-blue-600" />, label: 'Already OK', tone: 'text-blue-700 bg-blue-50 border-blue-200' };
@@ -1132,12 +1132,12 @@ function SeoAuditPanel() {
                         <h2 className="font-bold text-gray-900">SEO fixes</h2>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-2">
-                        <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
-                          <div className="text-xl font-bold text-green-700">
-                            {fixResult.summary.fixed}
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                          <div className="text-xl font-bold text-amber-700">
+                            {fixResult.summary.fixed + fixResult.summary.cannotFix}
                           </div>
-                          <div className="text-[10px] text-green-700 font-medium uppercase">
-                            Fixed
+                          <div className="text-[10px] text-amber-700 font-medium uppercase">
+                            Manual action
                           </div>
                         </div>
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
@@ -1166,15 +1166,15 @@ function SeoAuditPanel() {
                         </div>
                       </div>
 
-                      {/* What's automated vs manual */}
+                      {/* What's manual vs already OK */}
                       <div className="mt-3 grid md:grid-cols-2 gap-3">
-                        <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                          <p className="text-xs font-bold text-green-800 mb-1">✅ Automated (code generated)</p>
-                          <p className="text-[11px] text-green-700">Title tag, meta description, canonical, Open Graph, viewport, robots.txt, sitemap.xml, schema markup — copy the code and paste into your site, or apply via WordPress/webhook.</p>
-                        </div>
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                          <p className="text-xs font-bold text-amber-800 mb-1">⚠ Manual action needed</p>
-                          <p className="text-[11px] text-amber-700">Page speed, thin content, broken links, internal links, orphan pages — these require editing your website files or server config. No tool can fix these from a URL alone.</p>
+                          <p className="text-xs font-bold text-amber-800 mb-1">⚠ Manual action required</p>
+                          <p className="text-[11px] text-amber-700">All fixes below require you to manually edit your website. Copy the generated code and paste it into your HTML, or use "Apply to Site" to send to WordPress. No tool can automatically edit a live website from a URL alone.</p>
+                        </div>
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                          <p className="text-xs font-bold text-blue-800 mb-1">✅ Already OK</p>
+                          <p className="text-[11px] text-blue-700">These checks passed — no action needed.</p>
                         </div>
                       </div>
                     </div>
