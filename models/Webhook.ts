@@ -11,6 +11,7 @@ export const WEBHOOK_EVENTS = [
   'seo.fixed',
   'plagiarism.fixed',
   'content.humanized',
+  'blog.published',
 ] as const;
 
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
@@ -49,6 +50,11 @@ export const WEBHOOK_EVENT_LABELS: Record<
   'content.humanized': {
     label: 'Content Humanized',
     description: 'Fires when content is converted from AI-sounding to human-like text.',
+  },
+  'blog.published': {
+    label: 'Blog Published',
+    description:
+      'Fires when a user explicitly publishes a piece of content to an external blog (e.g. the Tech Solutions portfolio site) via webhook.',
   },
 };
 

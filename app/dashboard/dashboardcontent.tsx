@@ -504,9 +504,11 @@ export default function DashboardContent() {
     setWebhookPublishing(true);
     setWebhookResult(null);
     try {
-      // The webhook 'content.saved' event fires automatically when content is saved.
-      // But we can also manually trigger by saving the content.
-      const res = await fetch('/api/content/save', {
+      // Use the dedicated publish-blog endpoint which fires the
+      // `blog.published` event with a blog-ready payload (title, content,
+      // excerpt, category, tags, seoKeywords, featuredImage, etc.) that
+      // the receiving Tech Solutions blog webhook expects.
+      const res = await fetch('/api/content/publish-blog', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
         body: JSON.stringify({
@@ -524,7 +526,8 @@ export default function DashboardContent() {
       if (data.success) {
         setWebhookResult({
           success: true,
-          message: 'Content saved and sent to all connected webhook sites.',
+          message:
+            'Content published via webhook. It will appear on your connected blog within a few seconds. Check Webhooks → Deliveries for delivery status.',
         });
       } else {
         setWebhookResult({

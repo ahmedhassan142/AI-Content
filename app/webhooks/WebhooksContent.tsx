@@ -66,6 +66,7 @@ const EVENT_OPTIONS: { value: string; label: string; description: string }[] = [
   { value: 'seo.fixed', label: 'SEO Fixed', description: 'SEO issues auto-fixed.' },
   { value: 'plagiarism.fixed', label: 'Plagiarism Fixed', description: 'Plagiarism rewritten.' },
   { value: 'content.humanized', label: 'Content Humanized', description: 'AI text → human-like text.' },
+  { value: 'blog.published', label: 'Blog Published', description: 'Publish content to an external blog (e.g. Tech Solutions portfolio) via webhook.' },
 ];
 
 function eventLabel(value: string): string {
